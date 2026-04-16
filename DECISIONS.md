@@ -258,6 +258,31 @@ on a just-released language version is usually the cheaper call."*
 
 ---
 
+### Decision — `@extend_schema` on custom actions
+
+**Why:** drf-spectacular auto-generates correct schemas for standard
+ModelViewSet CRUD operations, but custom `@action` endpoints that return
+ad-hoc `Response({...})` dicts get the wrong schema — spectacular falls
+back to the ViewSet's default serializer (e.g. `GameSerializer`) even when
+the action returns a completely different shape. Adding `@extend_schema`
+with `request=` and `responses=` tells spectacular the actual input and
+output types.
+
+This matters because the frontend TypeScript types are generated from the
+schema. A wrong schema means the typed client lies about the shape of the
+data, which defeats the entire point of the type generation pipeline.
+
+**Tradeoff:** Adds a decorator per custom action. Worth it — the cost
+is a few lines, and the alternative is untyped or mis-typed frontend code.
+
+**Interview framing:** *"Custom DRF actions return freeform Response dicts
+that the schema generator can't introspect. I added explicit schema
+annotations so the generated TypeScript types match the real API contract.
+The typed client is only useful if the schema it's built on is accurate —
+otherwise you get a false sense of type safety."*
+
+---
+
 ### Decision — Fat models, thin views
 
 **Why:** Business logic lives on the models, not in the views. Every

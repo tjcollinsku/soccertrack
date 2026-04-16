@@ -52,3 +52,13 @@ class UndoStatSerializer(serializers.Serializer):
     game = serializers.PrimaryKeyRelatedField(queryset=Game.objects.all())
     player = serializers.PrimaryKeyRelatedField(queryset=Player.objects.all())
     stat_type = serializers.ChoiceField(choices=StatEvent.STAT_CHOICES)
+
+
+class LineupEntrySerializer(serializers.Serializer):
+    player_id = serializers.PrimaryKeyRelatedField(queryset=Player.objects.all())
+    position = serializers.ChoiceField(choices=PlayerGameSlot.POSITIONS)
+
+
+class StartLineupSerializer(serializers.Serializer):
+    """Input for POST /api/games/{id}/start_lineup/."""
+    lineup = LineupEntrySerializer(many=True)

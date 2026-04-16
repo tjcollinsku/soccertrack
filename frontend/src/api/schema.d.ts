@@ -42,6 +42,40 @@ export interface paths {
         patch: operations["games_partial_update"];
         trace?: never;
     };
+    "/api/games/{id}/end_game/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description CRUD for games + /api/games/{id}/rollup/ for stat totals. */
+        post: operations["games_end_game_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/games/{id}/lineup/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description CRUD for games + /api/games/{id}/rollup/ for stat totals. */
+        get: operations["games_lineup_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/games/{id}/rollup/": {
         parameters: {
             query?: never;
@@ -51,6 +85,40 @@ export interface paths {
         };
         /** @description CRUD for games + /api/games/{id}/rollup/ for stat totals. */
         get: operations["games_rollup_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/games/{id}/start_lineup/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description CRUD for games + /api/games/{id}/rollup/ for stat totals. */
+        post: operations["games_start_lineup_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/games/{id}/stats/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description CRUD for games + /api/games/{id}/rollup/ for stat totals. */
+        get: operations["games_stats_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -228,6 +296,13 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        EndGameRequest: {
+            final_time: string;
+        };
+        EndGameResponse: {
+            detail: string;
+            closed: number;
+        };
         Game: {
             readonly id: number;
             /** Format: date */
@@ -235,12 +310,51 @@ export interface components {
             opponent: string;
             location?: components["schemas"]["LocationEnum"];
         };
+        GameStatsResponse: {
+            game_id: number;
+            players: unknown[];
+        };
+        LineupEntry: {
+            player_id: number;
+            position: components["schemas"]["PositionEnum"];
+        };
+        LineupResponse: {
+            on_field: components["schemas"]["PlayerGameSlot"][];
+            bench: components["schemas"]["Player"][];
+        };
         /**
          * @description * `home` - Home
          *     * `away` - Away
          * @enum {string}
          */
         LocationEnum: "home" | "away";
+        MoveResponse: {
+            current_slot: components["schemas"]["PlayerGameSlot"] | null;
+        };
+        /** @description Input for POST /api/slots/move/. Wraps PlayerGameSlot.move_player. */
+        MoveSlot: {
+            game: number;
+            player: number;
+            new_position?: (components["schemas"]["NewPositionEnum"] | components["schemas"]["NullEnum"]) | null;
+            at_time: string;
+        };
+        /**
+         * @description * `GK` - Goalkeeper
+         *     * `LB` - Left Back
+         *     * `CB1` - Center Back (Left)
+         *     * `CB2` - Center Back (Right)
+         *     * `RB` - Right Back
+         *     * `LM` - Left Mid
+         *     * `CM` - Center Mid
+         *     * `RM` - Right Mid
+         *     * `LW` - Left Wing
+         *     * `ST` - Striker
+         *     * `RW` - Right Wing
+         * @enum {string}
+         */
+        NewPositionEnum: "GK" | "LB" | "CB1" | "CB2" | "RB" | "LM" | "CM" | "RM" | "LW" | "ST" | "RW";
+        /** @enum {unknown} */
+        NullEnum: null;
         PatchedGame: {
             readonly id?: number;
             /** Format: date */
@@ -302,6 +416,14 @@ export interface components {
          * @enum {string}
          */
         PositionEnum: "GK" | "LB" | "CB1" | "CB2" | "RB" | "LM" | "CM" | "RM" | "LW" | "ST" | "RW";
+        /** @description Input for POST /api/games/{id}/start_lineup/. */
+        StartLineup: {
+            lineup: components["schemas"]["LineupEntry"][];
+        };
+        StartLineupResponse: {
+            detail: string;
+            count: number;
+        };
         StatEvent: {
             readonly id: number;
             game: number;
@@ -323,6 +445,15 @@ export interface components {
          * @enum {string}
          */
         StatTypeEnum: "Pa" | "Cm" | "Dr" | "Dw" | "Sh" | "Fr" | "Gl" | "Tk";
+        UndoResponse: {
+            deleted: boolean;
+        };
+        /** @description Input for POST /api/stats/undo/. Wraps StatEvent.undo_last. */
+        UndoStat: {
+            game: number;
+            player: number;
+            stat_type: components["schemas"]["StatTypeEnum"];
+        };
     };
     responses: never;
     parameters: never;
@@ -475,6 +606,56 @@ export interface operations {
             };
         };
     };
+    games_end_game_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this game. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EndGameRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EndGameRequest"];
+                "multipart/form-data": components["schemas"]["EndGameRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EndGameResponse"];
+                };
+            };
+        };
+    };
+    games_lineup_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this game. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LineupResponse"];
+                };
+            };
+        };
+    };
     games_rollup_retrieve: {
         parameters: {
             query?: never;
@@ -493,6 +674,56 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Game"];
+                };
+            };
+        };
+    };
+    games_start_lineup_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this game. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartLineup"];
+                "application/x-www-form-urlencoded": components["schemas"]["StartLineup"];
+                "multipart/form-data": components["schemas"]["StartLineup"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StartLineupResponse"];
+                };
+            };
+        };
+    };
+    games_stats_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this game. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameStatsResponse"];
                 };
             };
         };
@@ -814,9 +1045,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PlayerGameSlot"];
-                "application/x-www-form-urlencoded": components["schemas"]["PlayerGameSlot"];
-                "multipart/form-data": components["schemas"]["PlayerGameSlot"];
+                "application/json": components["schemas"]["MoveSlot"];
+                "application/x-www-form-urlencoded": components["schemas"]["MoveSlot"];
+                "multipart/form-data": components["schemas"]["MoveSlot"];
             };
         };
         responses: {
@@ -825,7 +1056,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PlayerGameSlot"];
+                    "application/json": components["schemas"]["MoveResponse"];
                 };
             };
         };
@@ -982,9 +1213,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["StatEvent"];
-                "application/x-www-form-urlencoded": components["schemas"]["StatEvent"];
-                "multipart/form-data": components["schemas"]["StatEvent"];
+                "application/json": components["schemas"]["UndoStat"];
+                "application/x-www-form-urlencoded": components["schemas"]["UndoStat"];
+                "multipart/form-data": components["schemas"]["UndoStat"];
             };
         };
         responses: {
@@ -993,7 +1224,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StatEvent"];
+                    "application/json": components["schemas"]["UndoResponse"];
                 };
             };
         };

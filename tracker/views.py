@@ -1,6 +1,7 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, serializers as drf_serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from drf_spectacular.utils import extend_schema, inline_serializer
 
 from .models import Game, Player, PlayerGameSlot, StatEvent
 from .serializers import (
@@ -8,6 +9,7 @@ from .serializers import (
     MoveSlotSerializer,
     PlayerGameSlotSerializer,
     PlayerSerializer,
+    StartLineupSerializer,
     StatEventSerializer,
     UndoStatSerializer,
 )
@@ -59,6 +61,153 @@ class GameViewSet(viewsets.ModelViewSet):
             'counts': counts,
         })
 
+    @extend_schema(responses={200: inline_serializer('GameStatsResponse', fields={
+        'game_id': drf_serializers.IntegerField(),
+        'players': drf_serializers.ListField(),
+    })})
+    @action(detail=True, methods=['get'])
+    def stats(self, request, pk=None):
+        game = self.get_object()
+        slots = PlayerGameSlot.objects.filter(game=game).select_related('player')
+        player_ids = set(slots.values_list('player_id', flat=True))
+        players = Player.objects.filter(id__in=player_ids)
+        events = StatEvent.objects.filter(game=game)
+
+        clock_param = request.query_params.get('clock')
+        clock_now = None
+        if clock_param:
+            parts = clock_param.split(':')
+            from datetime import timedelta
+            clock_now = timedelta(
+                hours=int(parts[0]) if len(parts) > 2 else 0,
+                minutes=int(parts[-2]),
+                seconds=int(parts[-1]),
+            )
+
+        result = []
+        for player in players:
+            player_events = events.filter(player=player)
+            counts = StatEvent.rollup_counts(player_events)
+            minutes = PlayerGameSlot.minutes_played(game, player, clock_now=clock_now)
+            minutes_val = int(minutes.total_seconds() / 60)
+
+            pa = counts.get('Pa', 0)
+            cm = counts.get('Cm', 0)
+            sh = counts.get('Sh', 0)
+            fr = counts.get('Fr', 0)
+            dr = counts.get('Dr', 0)
+            dw = counts.get('Dw', 0)
+
+            result.append({
+                'player_id': player.id,
+                'name': player.name,
+                'jersey_number': player.jersey_number,
+                'minutes_played': minutes_val,
+                **counts,
+                'pass_completion': round(cm / pa * 100, 1) if pa else 0.0,
+                'dribble_success': round(dw / dr * 100, 1) if dr else 0.0,
+                'shot_accuracy': round(fr / sh * 100, 1) if sh else 0.0,
+            })
+
+        result.sort(key=lambda r: r['jersey_number'])
+        return Response({'game_id': game.id, 'players': result})
+
+    @extend_schema(
+        request=StartLineupSerializer,
+        responses={201: inline_serializer('StartLineupResponse', fields={
+            'detail': drf_serializers.CharField(),
+            'count': drf_serializers.IntegerField(),
+        })},
+    )
+    @action(detail=True, methods=['post'], url_path='start_lineup')
+    def start_lineup(self, request, pk=None):
+        game = self.get_object()
+        serializer = StartLineupSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        entries = serializer.validated_data['lineup']
+
+        if len(entries) != 11:
+            return Response(
+                {'detail': 'Exactly 11 players required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        positions = [e['position'] for e in entries]
+        if len(set(positions)) != 11:
+            return Response(
+                {'detail': 'Each position must be unique.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        player_ids = [e['player_id'].id for e in entries]
+        if len(set(player_ids)) != 11:
+            return Response(
+                {'detail': 'Each player must be unique.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if game.slots.filter(time_off__isnull=True).exists():
+            return Response(
+                {'detail': 'Lineup already set. Clear existing slots first.'},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        from datetime import timedelta
+        slots = []
+        for entry in entries:
+            slots.append(PlayerGameSlot(
+                game=game,
+                player=entry['player_id'],
+                position=entry['position'],
+                time_on=timedelta(0),
+            ))
+        PlayerGameSlot.objects.bulk_create(slots)
+        return Response({'detail': 'Lineup set.', 'count': len(slots)}, status=status.HTTP_201_CREATED)
+
+    @extend_schema(
+        request=inline_serializer('EndGameRequest', fields={
+            'final_time': drf_serializers.CharField(),
+        }),
+        responses={200: inline_serializer('EndGameResponse', fields={
+            'detail': drf_serializers.CharField(),
+            'closed': drf_serializers.IntegerField(),
+        })},
+    )
+    @action(detail=True, methods=['post'], url_path='end_game')
+    def end_game(self, request, pk=None):
+        game = self.get_object()
+        final_time = request.data.get('final_time', '00:00:00')
+        parts = final_time.split(':')
+        from datetime import timedelta
+        duration = timedelta(
+            hours=int(parts[0]) if len(parts) > 2 else 0,
+            minutes=int(parts[-2]),
+            seconds=int(parts[-1]),
+        )
+        closed = PlayerGameSlot.objects.filter(
+            game=game, time_off__isnull=True,
+        ).update(time_off=duration)
+        return Response({'detail': 'Game ended.', 'closed': closed})
+
+    @extend_schema(responses={200: inline_serializer('LineupResponse', fields={
+        'on_field': PlayerGameSlotSerializer(many=True),
+        'bench': PlayerSerializer(many=True),
+    })})
+    @action(detail=True, methods=['get'])
+    def lineup(self, request, pk=None):
+        game = self.get_object()
+        on_field = PlayerGameSlot.objects.filter(
+            game=game, time_off__isnull=True,
+        ).select_related('player')
+        on_field_ids = set(on_field.values_list('player_id', flat=True))
+        all_players = Player.objects.all()
+        bench = [p for p in all_players if p.id not in on_field_ids]
+
+        return Response({
+            'on_field': PlayerGameSlotSerializer(on_field, many=True).data,
+            'bench': PlayerSerializer(bench, many=True).data,
+        })
+
 
 class PlayerGameSlotViewSet(viewsets.ModelViewSet):
     """CRUD for lineup/subbing slots + POST /api/slots/move/."""
@@ -72,6 +221,12 @@ class PlayerGameSlotViewSet(viewsets.ModelViewSet):
             qs = qs.filter(game_id=game_id)
         return qs
 
+    @extend_schema(
+        request=MoveSlotSerializer,
+        responses={200: inline_serializer('MoveResponse', fields={
+            'current_slot': PlayerGameSlotSerializer(allow_null=True),
+        })},
+    )
     @action(detail=False, methods=['post'])
     def move(self, request):
         serializer = MoveSlotSerializer(data=request.data)
@@ -107,6 +262,12 @@ class StatEventViewSet(viewsets.ModelViewSet):
             qs = qs.filter(player_id=player_id)
         return qs
 
+    @extend_schema(
+        request=UndoStatSerializer,
+        responses={200: inline_serializer('UndoResponse', fields={
+            'deleted': drf_serializers.BooleanField(),
+        })},
+    )
     @action(detail=False, methods=['post'])
     def undo(self, request):
         serializer = UndoStatSerializer(data=request.data)

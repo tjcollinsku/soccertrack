@@ -138,7 +138,8 @@ if not DEBUG:
     CSRF_TRUSTED_ORIGINS = [
         f'https://{host}' for host in ALLOWED_HOSTS if host not in ('localhost', '127.0.0.1')
     ]
-    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = False  # Railway proxy handles SSL termination
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SESSION_COOKIE_SECURE = True

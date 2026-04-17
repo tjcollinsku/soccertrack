@@ -1,1 +1,1 @@
-web: python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn soccertrack.wsgi --bind 0.0.0.0:$PORT
+web: . /opt/venv/bin/activate && python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn soccertrack.wsgi --bind 0.0.0.0:$PORT

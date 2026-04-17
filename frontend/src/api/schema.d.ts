@@ -462,9 +462,10 @@ export interface components {
          *     * `Fr` - On Frame
          *     * `Gl` - Goal
          *     * `Tk` - Tackle
+         *     * `Sv` - Save
          * @enum {string}
          */
-        StatTypeEnum: "Pa" | "Cm" | "Dr" | "Dw" | "Sh" | "Fr" | "Gl" | "Tk";
+        StatTypeEnum: "Pa" | "Cm" | "Dr" | "Dw" | "Sh" | "Fr" | "Gl" | "Tk" | "Sv";
         UndoResponse: {
             deleted: boolean;
         };

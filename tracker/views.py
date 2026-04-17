@@ -1,9 +1,11 @@
+from collections import Counter, defaultdict
+
 from rest_framework import viewsets, status, serializers as drf_serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, inline_serializer
 
-from .models import Game, Player, PlayerGameSlot, StatEvent
+from .models import Game, Player, PlayerGameSlot, StatEvent, STAT_ROLLUP
 from .serializers import (
     GameSerializer,
     MoveSlotSerializer,
@@ -49,6 +51,42 @@ class PlayerViewSet(viewsets.ModelViewSet):
             dr = counts.get('Dr', 0)
             dw = counts.get('Dw', 0)
 
+            # Build per-position aggregation across all games
+            pos_agg = defaultdict(lambda: {'minutes': 0, 'events': []})
+            player_slots = all_slots.filter(player=player)
+            for slot in player_slots:
+                pos = slot.position
+                end = slot.time_off if slot.time_off is not None else None
+                slot_mins = int((end - slot.time_on).total_seconds() / 60) if end else 0
+                pos_agg[pos]['minutes'] += slot_mins
+                slot_events = StatEvent.stats_during_slot(slot)
+                pos_agg[pos]['events'].extend(
+                    slot_events.values_list('stat_type', flat=True)
+                )
+
+            positions = []
+            for pos, data in sorted(pos_agg.items()):
+                raw_counts = Counter(data['events'])
+                expanded = {}
+                for st, cnt in raw_counts.items():
+                    expanded[st] = expanded.get(st, 0) + cnt
+                    for implied in STAT_ROLLUP.get(st, []):
+                        expanded[implied] = expanded.get(implied, 0) + cnt
+                s_pa = expanded.get('Pa', 0)
+                s_cm = expanded.get('Cm', 0)
+                s_sh = expanded.get('Sh', 0)
+                s_fr = expanded.get('Fr', 0)
+                s_dr = expanded.get('Dr', 0)
+                s_dw = expanded.get('Dw', 0)
+                positions.append({
+                    'position': pos,
+                    'minutes': data['minutes'],
+                    **expanded,
+                    'pass_completion': round(s_cm / s_pa * 100, 1) if s_pa else 0.0,
+                    'dribble_success': round(s_dw / s_dr * 100, 1) if s_dr else 0.0,
+                    'shot_accuracy': round(s_fr / s_sh * 100, 1) if s_sh else 0.0,
+                })
+
             result.append({
                 'player_id': player.id,
                 'name': player.name,
@@ -59,6 +97,7 @@ class PlayerViewSet(viewsets.ModelViewSet):
                 'pass_completion': round(cm / pa * 100, 1) if pa else 0.0,
                 'dribble_success': round(dw / dr * 100, 1) if dr else 0.0,
                 'shot_accuracy': round(fr / sh * 100, 1) if sh else 0.0,
+                'positions': positions,
             })
 
         result.sort(key=lambda r: r['jersey_number'])
@@ -142,6 +181,29 @@ class GameViewSet(viewsets.ModelViewSet):
             dr = counts.get('Dr', 0)
             dw = counts.get('Dw', 0)
 
+            # Build per-position breakdown
+            player_slots = slots.filter(player=player)
+            positions = []
+            for slot in player_slots:
+                slot_events = StatEvent.stats_during_slot(slot)
+                slot_counts = StatEvent.rollup_counts(slot_events)
+                end = slot.time_off if slot.time_off is not None else clock_now
+                slot_mins = int((end - slot.time_on).total_seconds() / 60) if end else 0
+                s_pa = slot_counts.get('Pa', 0)
+                s_cm = slot_counts.get('Cm', 0)
+                s_sh = slot_counts.get('Sh', 0)
+                s_fr = slot_counts.get('Fr', 0)
+                s_dr = slot_counts.get('Dr', 0)
+                s_dw = slot_counts.get('Dw', 0)
+                positions.append({
+                    'position': slot.position,
+                    'minutes': slot_mins,
+                    **slot_counts,
+                    'pass_completion': round(s_cm / s_pa * 100, 1) if s_pa else 0.0,
+                    'dribble_success': round(s_dw / s_dr * 100, 1) if s_dr else 0.0,
+                    'shot_accuracy': round(s_fr / s_sh * 100, 1) if s_sh else 0.0,
+                })
+
             result.append({
                 'player_id': player.id,
                 'name': player.name,
@@ -151,6 +213,7 @@ class GameViewSet(viewsets.ModelViewSet):
                 'pass_completion': round(cm / pa * 100, 1) if pa else 0.0,
                 'dribble_success': round(dw / dr * 100, 1) if dr else 0.0,
                 'shot_accuracy': round(fr / sh * 100, 1) if sh else 0.0,
+                'positions': positions,
             })
 
         result.sort(key=lambda r: r['jersey_number'])

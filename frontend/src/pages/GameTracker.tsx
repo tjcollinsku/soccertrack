@@ -17,9 +17,10 @@ const STAT_LABELS: { key: StatTypeEnum; label: string }[] = [
   { key: 'Fr', label: 'Fr' },
   { key: 'Gl', label: 'Gl' },
   { key: 'Tk', label: 'Tk' },
+  { key: 'Sv', label: 'Sv' },
 ];
 
-const GK_STAT_KEYS: Set<StatTypeEnum> = new Set(['Tk', 'Pa', 'Cm']);
+const GK_STAT_KEYS: Set<StatTypeEnum> = new Set(['Pa', 'Cm', 'Sv']);
 
 const FORMATION_ROWS: { label: string; positions: PositionEnum[] }[] = [
   { label: 'forwards',  positions: ['LW', 'ST', 'RW'] },
@@ -139,7 +140,7 @@ export default function GameTracker() {
         player: playerId,
         stat_type: statType,
         game_time: durationToISO(clockSeconds),
-      },
+      } as never,
     });
     if (error) {
       setError('Failed to log stat');

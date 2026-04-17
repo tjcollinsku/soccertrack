@@ -35,7 +35,7 @@ export default function Roster() {
       return;
     }
     const { error } = await api.POST('/api/players/', {
-      body: { name: name.trim(), jersey_number: jerseyNum },
+      body: { name: name.trim(), jersey_number: jerseyNum } as never,
     });
     if (error) {
       setError('Failed to create player');

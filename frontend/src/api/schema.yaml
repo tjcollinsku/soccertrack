@@ -1224,6 +1224,7 @@ components:
       - Fr
       - Gl
       - Tk
+      - Sv
       type: string
       description: |-
         * `Pa` - Pass
@@ -1234,6 +1235,7 @@ components:
         * `Fr` - On Frame
         * `Gl` - Goal
         * `Tk` - Tackle
+        * `Sv` - Save
     UndoResponse:
       type: object
       properties:

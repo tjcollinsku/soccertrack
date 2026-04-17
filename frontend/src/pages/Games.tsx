@@ -36,7 +36,7 @@ export default function Games() {
       return;
     }
     const { error } = await api.POST('/api/games/', {
-      body: { date, opponent: opponent.trim(), location },
+      body: { date, opponent: opponent.trim(), location } as never,
     });
     if (error) {
       setError('Failed to create game');

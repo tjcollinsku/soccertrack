@@ -831,6 +831,47 @@ select {
 }
 
 /* ══════════════════════════════════════════
+   STATS HEADER & GAME SELECTOR
+   ══════════════════════════════════════════ */
+.stats-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.stats-header h1 {
+  margin: 0;
+}
+.game-select {
+  background: var(--bg-card);
+  color: var(--text-heading);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  min-width: 220px;
+  transition: border-color 0.15s;
+}
+.game-select:hover,
+.game-select:focus {
+  border-color: var(--red);
+  outline: none;
+}
+.game-select option {
+  background: var(--bg-surface);
+  color: var(--text);
+}
+.stats-subtitle {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  margin: 0 0 16px 0;
+}
+
+/* ══════════════════════════════════════════
    STATS TABLE
    ══════════════════════════════════════════ */
 .stats-table {
@@ -890,6 +931,47 @@ select {
 .stats-table .pct-cell {
   color: var(--text-muted);
   font-size: 0.75rem;
+}
+
+/* Expandable player rows */
+.stats-table .expandable-row {
+  cursor: pointer;
+}
+.stats-table .expandable-row:hover td {
+  background: var(--red-subtle);
+}
+.stats-table .expandable-row.expanded td {
+  border-bottom-color: transparent;
+}
+.expand-arrow {
+  display: inline-block;
+  width: 16px;
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  margin-right: 4px;
+  transition: color 0.15s;
+}
+.expandable-row:hover .expand-arrow {
+  color: var(--red-light);
+}
+
+/* Position breakdown sub-rows */
+.stats-table .position-row td {
+  padding: 6px 8px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  background: rgba(192, 39, 45, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+.stats-table .position-row:last-of-type td {
+  border-bottom: 1px solid var(--border);
+}
+.stats-table .position-label {
+  font-family: var(--mono);
+  font-weight: 700;
+  color: var(--red-light);
+  font-size: 0.68rem;
+  letter-spacing: 0.5px;
 }
 
 /* ══════════════════════════════════════════

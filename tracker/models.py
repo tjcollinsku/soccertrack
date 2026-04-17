@@ -144,6 +144,7 @@ class StatEvent(models.Model):
         ('Fr', 'On Frame'),
         ('Gl', 'Goal'),
         ('Tk', 'Tackle'),
+        ('Sv', 'Save'),
     ]
 
     game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name='stat_events')

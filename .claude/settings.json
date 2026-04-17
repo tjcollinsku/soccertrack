@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python manage.py runserver 8000)",
+      "Bash(start http://localhost:5173/games)",
+      "Bash(powershell -Command \"Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Screen]::PrimaryScreen.Bounds\")",
+      "Bash(powershell -Command 'Add-Type -AssemblyName System.Windows.Forms; $bmp = New-Object System.Drawing.Bitmap\\(1920, 1080\\); $gfx = [System.Drawing.Graphics]::FromImage\\($bmp\\); $gfx.CopyFromScreen\\(0, 0, 0, 0, $bmp.Size\\); $bmp.Save\\('\\\\''C:/Users/tjcol/AppData/Local/Temp/screenshot.png'\\\\''\\); $gfx.Dispose\\(\\); $bmp.Dispose\\(\\); Write-Output '\\\\''saved'\\\\''')",
+      "Read(//c/Users/tjcol/AppData/Local/Temp/**)",
+      "Bash(powershell -Command 'Start-Sleep -Seconds 2; Add-Type -AssemblyName System.Windows.Forms; $bmp = New-Object System.Drawing.Bitmap\\(3440, 1440\\); $gfx = [System.Drawing.Graphics]::FromImage\\($bmp\\); $gfx.CopyFromScreen\\(0, 0, 0, 0, $bmp.Size\\); $bmp.Save\\('\\\\''C:/Users/tjcol/AppData/Local/Temp/screenshot2.png'\\\\''\\); $gfx.Dispose\\(\\); $bmp.Dispose\\(\\); Write-Output '\\\\''saved'\\\\''')",
+      "Bash(powershell -Command \"Start-Process 'http://localhost:5173/games'\")",
+      "Bash(powershell -Command 'Start-Sleep -Seconds 3; Add-Type -AssemblyName System.Windows.Forms; $bmp = New-Object System.Drawing.Bitmap\\(3440, 1440\\); $gfx = [System.Drawing.Graphics]::FromImage\\($bmp\\); $gfx.CopyFromScreen\\(0, 0, 0, 0, $bmp.Size\\); $bmp.Save\\('\\\\''C:/Users/tjcol/AppData/Local/Temp/screenshot3.png'\\\\''\\); $gfx.Dispose\\(\\); $bmp.Dispose\\(\\); Write-Output '\\\\''saved'\\\\''')",
+      "Bash(powershell -Command 'Start-Sleep -Seconds 2; Add-Type -AssemblyName System.Windows.Forms; $bmp = New-Object System.Drawing.Bitmap\\(3440, 1440\\); $gfx = [System.Drawing.Graphics]::FromImage\\($bmp\\); $gfx.CopyFromScreen\\(0, 0, 0, 0, $bmp.Size\\); $bmp.Save\\('\\\\''C:/Users/tjcol/AppData/Local/Temp/screenshot4.png'\\\\''\\); $gfx.Dispose\\(\\); $bmp.Dispose\\(\\); Write-Output '\\\\''saved'\\\\''')",
+      "Bash(powershell -Command \"Start-Process 'http://localhost:5173/roster'\")",
+      "Bash(powershell -Command 'Start-Sleep -Seconds 2; Add-Type -AssemblyName System.Windows.Forms; $bmp = New-Object System.Drawing.Bitmap\\(3440, 1440\\); $gfx = [System.Drawing.Graphics]::FromImage\\($bmp\\); $gfx.CopyFromScreen\\(0, 0, 0, 0, $bmp.Size\\); $bmp.Save\\('\\\\''C:/Users/tjcol/AppData/Local/Temp/screenshot5.png'\\\\''\\); $gfx.Dispose\\(\\); $bmp.Dispose\\(\\); Write-Output '\\\\''saved'\\\\''')",
+      "Bash(powershell -Command '$wshell = New-Object -ComObject wscript.shell; $wshell.AppActivate\\('\\\\''SoccerTrack'\\\\''\\) -or $wshell.AppActivate\\('\\\\''localhost:5173'\\\\''\\)')",
+      "Bash(curl -s http://localhost:5173/stats)",
+      "Bash(powershell -Command \"Start-Process 'http://localhost:5173/games/1/tracker'\")",
+      "Bash(powershell -Command 'Start-Sleep -Seconds 3; Add-Type -AssemblyName System.Windows.Forms; $bmp = New-Object System.Drawing.Bitmap\\(3440, 1440\\); $gfx = [System.Drawing.Graphics]::FromImage\\($bmp\\); $gfx.CopyFromScreen\\(0, 0, 0, 0, $bmp.Size\\); $bmp.Save\\('\\\\''C:/Users/tjcol/AppData/Local/Temp/screenshot6.png'\\\\''\\); $gfx.Dispose\\(\\); $bmp.Dispose\\(\\); Write-Output '\\\\''saved'\\\\''')",
+      "Bash(powershell -Command 'Start-Sleep -Seconds 2; Add-Type -AssemblyName System.Windows.Forms; $bmp = New-Object System.Drawing.Bitmap\\(3440, 1440\\); $gfx = [System.Drawing.Graphics]::FromImage\\($bmp\\); $gfx.CopyFromScreen\\(0, 0, 0, 0, $bmp.Size\\); $bmp.Save\\('\\\\''C:/Users/tjcol/AppData/Local/Temp/screenshot7.png'\\\\''\\); $gfx.Dispose\\(\\); $bmp.Dispose\\(\\); Write-Output '\\\\''saved'\\\\''')",
+      "Bash(powershell -Command 'Start-Sleep -Seconds 2; Add-Type -AssemblyName System.Windows.Forms; $bmp = New-Object System.Drawing.Bitmap\\(3440, 1440\\); $gfx = [System.Drawing.Graphics]::FromImage\\($bmp\\); $gfx.CopyFromScreen\\(0, 0, 0, 0, $bmp.Size\\); $bmp.Save\\('\\\\''C:/Users/tjcol/AppData/Local/Temp/screenshot8.png'\\\\''\\); $gfx.Dispose\\(\\); $bmp.Dispose\\(\\); Write-Output '\\\\''saved'\\\\''')",
+      "Bash(powershell -Command 'Start-Process '\\\\''http://localhost:5173/games/1/tracker'\\\\''; Start-Sleep -Seconds 3; Add-Type -AssemblyName System.Windows.Forms; $bmp = New-Object System.Drawing.Bitmap\\(3440, 1440\\); $gfx = [System.Drawing.Graphics]::FromImage\\($bmp\\); $gfx.CopyFromScreen\\(0, 0, 0, 0, $bmp.Size\\); $bmp.Save\\('\\\\''C:/Users/tjcol/AppData/Local/Temp/screenshot9.png'\\\\''\\); $gfx.Dispose\\(\\); $bmp.Dispose\\(\\); Write-Output '\\\\''saved'\\\\''')",
+      "Bash(powershell -Command 'Start-Process '\\\\''http://localhost:5173/games/1/tracker'\\\\''; Start-Sleep -Seconds 3; Add-Type -AssemblyName System.Windows.Forms; $bmp = New-Object System.Drawing.Bitmap\\(3440, 1440\\); $gfx = [System.Drawing.Graphics]::FromImage\\($bmp\\); $gfx.CopyFromScreen\\(0, 0, 0, 0, $bmp.Size\\); $bmp.Save\\('\\\\''C:/Users/tjcol/AppData/Local/Temp/screenshot10.png'\\\\''\\); $gfx.Dispose\\(\\); $bmp.Dispose\\(\\); Write-Output '\\\\''saved'\\\\''')",
+      "Bash(python manage.py makemigrations tracker)",
+      "Bash(python manage.py spectacular --file frontend/src/api/schema.yaml)",
+      "Bash(npx openapi-typescript *)",
+      "Bash(python manage.py test tracker --verbosity=1)",
+      "Bash(python manage.py check --deploy)",
+      "Bash(python manage.py collectstatic --noinput)",
+      "Read(//tmp/warriorgirlssc/**)",
+      "Read(//c/Users/tjcol/OneDrive/Documents/Claude/Projects/Job Search/warriorgirlssc/**)",
+      "Bash(python -c \"from django.core.management.utils import get_random_secret_key; print\\(get_random_secret_key\\(\\)\\)\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\tjcol\\OneDrive\\Documents\\Claude\\Projects\\Job Search\\warriorgirlssc"
+    ]
+  }
+}

@@ -182,6 +182,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/players/season_stats/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description CRUD for roster + /api/players/{id}/minutes/?game={game_id} */
+        get: operations["players_season_stats_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/slots/": {
         parameters: {
             query?: never;
@@ -416,6 +433,9 @@ export interface components {
          * @enum {string}
          */
         PositionEnum: "GK" | "LB" | "CB1" | "CB2" | "RB" | "LM" | "CM" | "RM" | "LW" | "ST" | "RW";
+        SeasonStatsResponse: {
+            players: unknown[];
+        };
         /** @description Input for POST /api/games/{id}/start_lineup/. */
         StartLineup: {
             lineup: components["schemas"]["LineupEntry"][];
@@ -889,6 +909,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Player"];
+                };
+            };
+        };
+    };
+    players_season_stats_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeasonStatsResponse"];
                 };
             };
         };

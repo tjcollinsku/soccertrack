@@ -19,18 +19,13 @@ const STAT_LABELS: { key: StatTypeEnum; label: string }[] = [
   { key: 'Tk', label: 'Tk' },
 ];
 
-const FORMATION: { pos: PositionEnum; row: number; col: number }[] = [
-  { pos: 'LW',  row: 1, col: 1 },
-  { pos: 'ST',  row: 1, col: 2 },
-  { pos: 'RW',  row: 1, col: 3 },
-  { pos: 'LM',  row: 2, col: 1 },
-  { pos: 'CM',  row: 2, col: 2 },
-  { pos: 'RM',  row: 2, col: 3 },
-  { pos: 'LB',  row: 3, col: 1 },
-  { pos: 'CB1', row: 3, col: 2 },
-  { pos: 'CB2', row: 3, col: 3 },
-  { pos: 'RB',  row: 3, col: 4 },
-  { pos: 'GK',  row: 4, col: 2 },
+const GK_STAT_KEYS: Set<StatTypeEnum> = new Set(['Tk', 'Pa', 'Cm']);
+
+const FORMATION_ROWS: { label: string; positions: PositionEnum[] }[] = [
+  { label: 'forwards',  positions: ['LW', 'ST', 'RW'] },
+  { label: 'midfield',  positions: ['LM', 'CM', 'RM'] },
+  { label: 'defense',   positions: ['LB', 'CB1', 'CB2', 'RB'] },
+  { label: 'goalkeeper', positions: ['GK'] },
 ];
 
 const STAT_ROLLUP: Partial<Record<StatTypeEnum, StatTypeEnum[]>> = {
@@ -59,6 +54,11 @@ function clockStorageKey(gameId: number): string {
 
 type StatCounts = Partial<Record<StatTypeEnum, number>>;
 
+// Selection can be a bench player OR a field player (for swaps)
+type Selection =
+  | { type: 'bench'; player: Player }
+  | { type: 'field'; slot: PlayerGameSlot };
+
 export default function GameTracker() {
   const { id } = useParams<{ id: string }>();
   const gameId = Number(id);
@@ -73,7 +73,7 @@ export default function GameTracker() {
   const [onField, setOnField] = useState<PlayerGameSlot[]>([]);
   const [bench, setBench] = useState<Player[]>([]);
   const [statCounts, setStatCounts] = useState<Record<number, StatCounts>>({});
-  const [selectedBench, setSelectedBench] = useState<Player | null>(null);
+  const [selection, setSelection] = useState<Selection | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -175,39 +175,118 @@ export default function GameTracker() {
     });
   }
 
-  async function handleSub(fieldSlot: PlayerGameSlot) {
-    if (!selectedBench || gameOver) return;
-    const benchPlayer = selectedBench;
-    setSelectedBench(null);
+  async function handleFieldClick(slot: PlayerGameSlot) {
+    if (gameOver) return;
 
-    const { error } = await api.POST('/api/slots/move/', {
-      body: {
-        game: gameId,
-        player: fieldSlot.player.id,
-        new_position: null,
-        at_time: durationToISO(clockSeconds),
-      } as never,
-    });
-    if (error) {
-      setError('Failed to sub off player');
+    if (!selection) {
+      // Nothing selected — select this field player
+      setSelection({ type: 'field', slot });
       return;
     }
 
-    const { error: error2 } = await api.POST('/api/slots/move/', {
-      body: {
-        game: gameId,
-        player: benchPlayer.id,
-        new_position: fieldSlot.position,
-        at_time: durationToISO(clockSeconds),
-      } as never,
+    if (selection.type === 'bench') {
+      // Bench player selected → sub them onto this field position
+      const benchPlayer = selection.player;
+      setSelection(null);
+
+      const { error } = await api.POST('/api/slots/move/', {
+        body: {
+          game: gameId,
+          player: slot.player.id,
+          new_position: null,
+          at_time: durationToISO(clockSeconds),
+        } as never,
+      });
+      if (error) {
+        setError('Failed to sub off player');
+        return;
+      }
+
+      const { error: error2 } = await api.POST('/api/slots/move/', {
+        body: {
+          game: gameId,
+          player: benchPlayer.id,
+          new_position: slot.position,
+          at_time: durationToISO(clockSeconds),
+        } as never,
+      });
+      if (error2) {
+        setError('Failed to sub on player');
+        loadLineup();
+        return;
+      }
+
+      loadLineup();
+      return;
+    }
+
+    // Field player selected → clicked another field player:
+    // Move the first player to the second player's position, bench the second player
+    const selectedSlot = selection.slot;
+
+    if (selectedSlot.player.id === slot.player.id) {
+      // Clicked same player — deselect
+      setSelection(null);
+      return;
+    }
+
+    setSelection(null);
+    const time = durationToISO(clockSeconds);
+    const targetPos = slot.position;
+
+    // 1. Bench the second player (the one being displaced)
+    const { error: err1 } = await api.POST('/api/slots/move/', {
+      body: { game: gameId, player: slot.player.id, new_position: null, at_time: time } as never,
     });
-    if (error2) {
-      setError('Failed to sub on player');
+    if (err1) {
+      setError('Failed to bench player');
+      loadLineup();
+      return;
+    }
+
+    // 2. Move the first player (the selected one) into that position
+    const { error: err2 } = await api.POST('/api/slots/move/', {
+      body: { game: gameId, player: selectedSlot.player.id, new_position: targetPos, at_time: time } as never,
+    });
+    if (err2) {
+      setError('Failed to move player');
       loadLineup();
       return;
     }
 
     loadLineup();
+  }
+
+  async function handleEmptySlotClick(pos: PositionEnum) {
+    if (gameOver || !selection) return;
+
+    const playerId = selection.type === 'bench' ? selection.player.id : selection.slot.player.id;
+    setSelection(null);
+
+    const { error } = await api.POST('/api/slots/move/', {
+      body: {
+        game: gameId,
+        player: playerId,
+        new_position: pos,
+        at_time: durationToISO(clockSeconds),
+      } as never,
+    });
+    if (error) {
+      setError('Failed to place player');
+      loadLineup();
+      return;
+    }
+
+    loadLineup();
+  }
+
+  function handleBenchClick(player: Player) {
+    if (gameOver) return;
+    if (selection?.type === 'bench' && selection.player.id === player.id) {
+      setSelection(null);
+    } else {
+      setSelection({ type: 'bench', player });
+    }
   }
 
   async function handleEndGame() {
@@ -237,8 +316,21 @@ export default function GameTracker() {
     slotByPosition[s.position] = s;
   }
 
+  // Determine selection state for styling
+  const selectedFieldPlayerId = selection?.type === 'field' ? selection.slot.player.id : null;
+  const selectedBenchPlayerId = selection?.type === 'bench' ? selection.player.id : null;
+  const hasSelection = selection !== null;
+
+  // Status message for the bench header
+  let selectionHint = 'Click a player to select';
+  if (selection?.type === 'bench') {
+    selectionHint = `${selection.player.name} selected — click a field player to sub in`;
+  } else if (selection?.type === 'field') {
+    selectionHint = `${selection.slot.player.name} selected — click a player to take their spot, or an empty slot to move`;
+  }
+
   return (
-    <div className="page">
+    <div className="page tracker-page">
       {error && <p className="error">{error}</p>}
 
       <div className="clock-bar">
@@ -259,82 +351,111 @@ export default function GameTracker() {
         {gameOver && <span className="clock-final">Final</span>}
       </div>
 
-      <div className="field">
-        <div className="field-grid">
-          {FORMATION.map(({ pos, row, col }) => {
-            const slot = slotByPosition[pos];
-            if (!slot) {
-              return (
-                <div
-                  key={pos}
-                  className="empty-slot"
-                  style={{ gridRow: row, gridColumn: col }}
-                >
-                  {pos}
-                </div>
-              );
-            }
-            const player = slot.player;
-            const playerId = player.id;
-            const counts = statCounts[playerId] || {};
-            const minutes = getPlayerMinutes(slot);
-            const isSub = selectedBench && !gameOver;
+      <div className="tracker-layout">
+        <div className="pitch-wrapper">
+          <div className="pitch">
+            <div className="pitch-markings">
+              <div className="pitch-halfway" />
+              <div className="pitch-circle" />
+              <div className="pitch-box-top" />
+              <div className="pitch-box-bottom" />
+              <div className="pitch-arc-top" />
+              <div className="pitch-arc-bottom" />
+            </div>
 
-            return (
-              <div
-                key={pos}
-                onClick={() => isSub && handleSub(slot)}
-                className={`player-card ${isSub ? 'sub-target' : ''}`}
-                style={{ gridRow: row, gridColumn: col }}
-              >
-                <div className="card-header">
-                  <span className="card-pos">{pos}</span>
-                  #{player.jersey_number} {player.name}
-                </div>
-                <div className="card-time">⏱ {minutes}min</div>
-                {STAT_LABELS.map(({ key, label }) => (
-                  <div key={key} className="stat-row">
-                    <span className="stat-label">{label}</span>
-                    <button
-                      className="stat-btn"
-                      onClick={(e) => { e.stopPropagation(); removeStat(playerId, key); }}
-                      disabled={gameOver}
-                    >−</button>
-                    <span className="stat-val">{counts[key] || 0}</span>
-                    <button
-                      className="stat-btn plus"
-                      onClick={(e) => { e.stopPropagation(); logStat(playerId, key); }}
-                      disabled={gameOver}
-                    >+</button>
-                  </div>
-                ))}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+            {FORMATION_ROWS.map(({ label, positions }) => (
+              <div key={label} className={`pitch-row pitch-row-${label}`}>
+                {positions.map((pos) => {
+                  const slot = slotByPosition[pos];
+                  if (!slot) {
+                    const canFill = selection !== null && !gameOver;
+                    return (
+                      <div
+                        key={pos}
+                        className={`empty-slot${canFill ? ' fillable' : ''}`}
+                        onClick={() => handleEmptySlotClick(pos)}
+                      >
+                        {pos}
+                      </div>
+                    );
+                  }
+                  const player = slot.player;
+                  const playerId = player.id;
+                  const counts = statCounts[playerId] || {};
+                  const minutes = getPlayerMinutes(slot);
+                  const isGK = pos === 'GK';
+                  const visibleStats = isGK
+                    ? STAT_LABELS.filter(s => GK_STAT_KEYS.has(s.key))
+                    : STAT_LABELS;
 
-      {!gameOver && (
-        <div className="bench">
-          <div className="bench-title">
-            Bench {selectedBench ? `— ${selectedBench.name} selected (click a field player to sub)` : '— click to select'}
-          </div>
-          <div className="bench-cards">
-            {bench.map((p) => (
-              <div
-                key={p.id}
-                onClick={() => setSelectedBench(selectedBench?.id === p.id ? null : p)}
-                className={`bench-card ${selectedBench?.id === p.id ? 'selected' : ''}`}
-              >
-                #{p.jersey_number} {p.name}
+                  const isSelected = selectedFieldPlayerId === playerId;
+                  const isTarget = hasSelection && !isSelected && !gameOver;
+
+                  return (
+                    <div
+                      key={pos}
+                      onClick={() => handleFieldClick(slot)}
+                      className={`player-card${isSelected ? ' selected' : ''}${isTarget ? ' sub-target' : ''}`}
+                    >
+                      <div className="card-badge">{pos}</div>
+                      <div className="card-name">#{player.jersey_number} {player.name}</div>
+                      <div className="card-time">{minutes}′</div>
+                      <div className="card-stats">
+                        {visibleStats.map(({ key, label }) => (
+                          <div key={key} className="stat-row">
+                            <span className="stat-label">{label}</span>
+                            <button
+                              className="stat-btn"
+                              onClick={(e) => { e.stopPropagation(); removeStat(playerId, key); }}
+                              disabled={gameOver}
+                            >−</button>
+                            <span className="stat-val">{counts[key] || 0}</span>
+                            <button
+                              className="stat-btn plus"
+                              onClick={(e) => { e.stopPropagation(); logStat(playerId, key); }}
+                              disabled={gameOver}
+                            >+</button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ))}
-            {bench.length === 0 && (
-              <p className="text-muted text-sm">All players on field</p>
-            )}
           </div>
         </div>
-      )}
+
+        {!gameOver && (
+          <div className="bench-panel">
+            <div className="bench-title">Substitutes</div>
+            <div className="bench-hint">{selectionHint}</div>
+            <div className="bench-list">
+              {bench.map((p) => (
+                <div
+                  key={p.id}
+                  onClick={() => handleBenchClick(p)}
+                  className={`bench-card ${selectedBenchPlayerId === p.id ? 'selected' : ''}`}
+                >
+                  <span className="bench-jersey">{p.jersey_number}</span>
+                  <span className="bench-name">{p.name}</span>
+                </div>
+              ))}
+              {bench.length === 0 && (
+                <p className="text-muted text-sm">All players on field</p>
+              )}
+            </div>
+            {selection && (
+              <button
+                className="btn btn-secondary bench-cancel-btn"
+                onClick={() => setSelection(null)}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

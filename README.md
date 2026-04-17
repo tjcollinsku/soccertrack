@@ -18,11 +18,24 @@ production-shaped backend engineering choices.
 - **Model helpers** — `move_player`, `undo_last`, `rollup_counts`,
   `minutes_played`. Domain logic lives on the models, not in views.
 - **REST API** — resource-oriented endpoints under `/api/`, with
-  custom actions via `@action` for operations that don't fit pure CRUD.
+  custom actions via `@action` for lineup management, stat logging,
+  substitutions, game lifecycle, and season-wide stat aggregation.
 - **OpenAPI schema** generated from code via drf-spectacular. Swagger UI
   at `/api/docs/`.
 - **Typed frontend client** — React calls generated from the backend
   schema; if a serializer changes shape, the frontend fails to compile.
+- **Full React frontend** — six pages:
+  - **Roster** — add/edit players
+  - **Games** — create and list games
+  - **Game Setup** — assign starting XI to a 4-3-3 formation
+  - **Live Tracker** — FPL-inspired pitch layout with per-player stat
+    +/- buttons, game clock with sessionStorage persistence, substitution
+    flow, and Game Over lifecycle
+  - **Game Summary** — per-player stats table with calculated percentages
+  - **Season Stats** — aggregated stats across all completed games
+- **Warriors theme** — red/black color scheme with pitch-realistic
+  gradient, mow-line stripes, and visible pitch markings (halfway line,
+  center circle, penalty boxes)
 - **18 tests**, all model- and API-layer. Runs in ~40ms.
 
 See [DECISIONS.md](DECISIONS.md) for the engineering choices and why each
@@ -53,7 +66,7 @@ npm run dev                        # http://localhost:5173/
 
 | URL | Purpose |
 |---|---|
-| http://localhost:5173/ | React app (roster page so far) |
+| http://localhost:5173/ | React app (all pages) |
 | http://127.0.0.1:8000/admin/ | Django admin (add players/games by hand) |
 | http://127.0.0.1:8000/api/ | Browsable DRF API |
 | http://127.0.0.1:8000/api/docs/ | Swagger UI |
@@ -92,6 +105,11 @@ python manage.py test tracker -v 2
 - [x] OpenAPI schema + Swagger UI
 - [x] React scaffold + typed client
 - [x] Roster page (list + create players)
-- [ ] Games page
-- [ ] Live scoring screen (pitch diagram, stat buttons, clock)
-- [ ] Stats rollup + report views
+- [x] Games page (list + create games)
+- [x] Game Setup page (assign starting XI to 4-3-3 formation)
+- [x] Live Tracker (pitch diagram, stat +/- buttons, game clock, sub flow, game over)
+- [x] Game Summary page (per-player stats table with calculated percentages)
+- [x] Season Stats page (aggregated stats across all games)
+- [x] Warriors color scheme (red/black theme with FPL-inspired pitch layout)
+- [ ] Docker + deploy to Railway
+- [ ] Season history / game archive views

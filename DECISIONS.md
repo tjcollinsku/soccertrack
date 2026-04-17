@@ -21,6 +21,129 @@ and **interview framing** (the sentence-or-two version to use under pressure).
 
 ## Decisions
 
+### Decision — FPL-inspired pitch layout with row-based flexbox, not CSS grid
+
+**Why:** The original tracker used a CSS grid with explicit `gridRow`/`gridColumn`
+on every card. This produced a rigid, spreadsheet-like layout that didn't
+resemble a real pitch. The Fantasy Premier League "Team of the Week" layout
+was the visual target — each formation row (forwards, midfield, defense, GK)
+is its own centered flex container, cards float on a realistic pitch with
+visible markings, and each row has natural spacing.
+
+Switched the JSX from a single flat `FORMATION` array with row/col coordinates
+to `FORMATION_ROWS` — an array of `{ label, positions[] }` objects. Each row
+renders as a `<div className="pitch-row">` with `display: flex;
+justify-content: center`. The pitch itself uses a radial gradient with
+repeating stripe overlay for mow lines, plus absolutely-positioned divs for
+halfway line, center circle, penalty boxes, and penalty arcs.
+
+**Tradeoff:** More CSS and more DOM elements for the pitch markings. Cards
+are slightly harder to target individually since they no longer have grid
+coordinates. Worth it — the pitch now looks like a pitch.
+
+**Interview framing:** *"The formation layout uses row-based flexbox instead
+of CSS grid — each line of the formation is a centered flex container. Grid
+was too rigid for the visual I wanted; flex gives natural centering and
+spacing per row. Pitch markings are positioned divs inside a markings
+container so they don't interfere with card layout."*
+
+---
+
+### Decision — Session-scoped clock persistence via sessionStorage
+
+**Why:** The game clock runs in React state (a `setInterval` incrementing
+seconds). Navigating away from the tracker page unmounts the component and
+destroys the clock. Without persistence, a parent who checks the summary
+mid-game returns to find the clock reset to 0:00 and player minutes going
+negative.
+
+`sessionStorage` fixes this: the clock writes its value on every tick, and
+restores it on mount. Session-scoped (not `localStorage`) so it doesn't
+leak across tabs or persist after closing the browser — a stale clock from
+last week's game would be worse than no persistence at all.
+
+**Tradeoff:** One storage write per second per game. Trivial.
+
+**Interview framing:** *"The game clock persists to sessionStorage on every
+tick so navigating away and back doesn't reset it. I used sessionStorage
+instead of localStorage because a stale clock from a previous browser
+session is worse than no clock — session scope matches the lifecycle of
+one game."*
+
+---
+
+### Decision — Stat rollup applied in both backend and frontend
+
+**Why:** The stat hierarchy (goal → shot on frame → shot; completed pass →
+pass attempt; dribble won → dribble attempt) is expanded at read time by
+the backend's `rollup_counts()` helper. But the frontend uses optimistic
+updates — when a user clicks [+] for a goal, the UI increments the count
+immediately without waiting for the API response.
+
+If the frontend only incremented the clicked stat, the user would see goals
+go up but shots stay at 0 until the next full data reload. So the same
+`STAT_ROLLUP` constant exists in both the backend (`models.py`) and the
+frontend (`GameTracker.tsx`), and the frontend applies it during optimistic
+updates.
+
+**Tradeoff:** Duplicated hierarchy definition across two languages. The
+hierarchy is small (4 rules) and stable, so the duplication is manageable.
+If it grew, I'd expose it via the API.
+
+**Interview framing:** *"The stat hierarchy is duplicated between backend
+and frontend — the backend expands it at query time, and the frontend
+applies the same rules during optimistic updates so the UI stays consistent
+without waiting for the API round-trip. It's a pragmatic trade: duplicating
+four rules beats adding latency to every stat click."*
+
+---
+
+### Decision — Game Over flow gates the summary page
+
+**Why:** The summary page shows minutes played per player, which requires
+all `PlayerGameSlot` rows to have their `time_off` set. Without a Game Over
+step, a user could navigate to the summary mid-game and see incomplete or
+zero minutes for all players still on the field.
+
+The `end_game` endpoint closes every open slot with the final clock time,
+then the frontend navigates to the summary. The tracker page detects a
+finished game (no active slots) on load and shows "Final" instead of the
+clock controls.
+
+**Tradeoff:** Users can't view partial summaries mid-game from the summary
+page. They can still see live stat counts on the tracker itself. Acceptable
+— the summary is a post-game artifact.
+
+**Interview framing:** *"The summary page is gated behind a Game Over action
+that closes all open player slots. That ensures minutes-played calculations
+are accurate. I made this a deliberate UX gate rather than trying to handle
+partial data — the tracker shows live stats during the game, and the summary
+is the clean post-game view."*
+
+---
+
+### Decision — Season stats as a dedicated endpoint, not client-side aggregation
+
+**Why:** The Season Stats page needs every player's totals across all games.
+Two options: (1) fetch every game's stats and aggregate in the browser, or
+(2) add a single backend endpoint that does the aggregation in one query
+pass.
+
+I chose (2) — `/api/players/season_stats/`. The backend already has
+`rollup_counts()` and `minutes_played()` helpers, so the endpoint reuses
+them. The frontend gets a single request with the final numbers.
+
+**Tradeoff:** One more backend endpoint. Saves N+1 requests on the
+frontend (one per game) and keeps aggregation logic server-side where it's
+testable and cacheable.
+
+**Interview framing:** *"Season-wide stats are aggregated server-side in a
+dedicated endpoint rather than fetched per-game and summed in the browser.
+It reuses the existing rollup helpers, avoids N+1 client requests, and
+keeps the aggregation logic in one testable place."*
+
+---
+
 ### Decision — One venv per project; `requirements.txt` pins exact versions
 
 **Why:** Installing Django globally on my machine would create version conflicts
@@ -503,10 +626,15 @@ one central place.
 
 ### "Walk me through your architecture"
 
-Django backend, REST API via DRF, React + Vite frontend. Django admin for
-development and ops. SQLite locally, Postgres-ready for any eventual deploy.
-Tests live at the model layer; I haven't built integration tests yet
-because the frontend isn't wired up.
+Django backend, REST API via DRF, React + Vite frontend with a typed client
+generated from the OpenAPI schema. Django admin for development and ops.
+SQLite locally, Postgres-ready for deploy. The frontend has five pages:
+Games (CRUD), Game Setup (assign starting XI to a 4-3-3 formation), Live
+Tracker (pitch diagram with stat buttons, game clock, substitution flow),
+Game Summary (per-player stats table), and Season Stats (aggregated across
+all games). The tracker uses optimistic updates with the stat rollup
+hierarchy mirrored in the frontend. Clock persists to sessionStorage so
+navigation doesn't reset it.
 
 ---
 
@@ -521,6 +649,11 @@ because the frontend isn't wired up.
   plain `Serializer`, nested-read/FK-write pattern, custom actions via
   `@action`.
 - **2026-04-15** — Added Git-Bash-over-PowerShell decision.
+- **2026-04-15** — Added five frontend/UX decisions: FPL-inspired pitch
+  layout (row-based flexbox over CSS grid), sessionStorage clock
+  persistence, dual-layer stat rollup (backend + frontend optimistic
+  updates), Game Over flow gating summary page, season stats as a
+  dedicated backend endpoint.
 - **2026-04-15** — Initial decision log created. Captures the five key
   model-layer decisions made during the schema design session:
   `DurationField` over `CharField`, stat rollup at read time, DB-layer

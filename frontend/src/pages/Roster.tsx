@@ -70,13 +70,16 @@ export default function Roster() {
 
       <div className="surface">
         {loading ? (
-          <p className="text-muted">Loading…</p>
+          <div className="loading">Loading roster…</div>
         ) : players.length === 0 ? (
-          <p className="text-muted">No players yet. Add one above.</p>
+          <div className="empty-state">
+            <div className="empty-state-icon">&#128085;</div>
+            No players yet. Add one above.
+          </div>
         ) : (
           players.map((p) => (
             <div key={p.id} className="roster-item">
-              <span className="roster-jersey">#{p.jersey_number}</span>
+              <span className="roster-jersey">{p.jersey_number}</span>
               <span className="roster-name">{p.name}</span>
             </div>
           ))

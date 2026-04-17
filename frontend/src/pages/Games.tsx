@@ -76,13 +76,19 @@ export default function Games() {
 
       <div className="surface">
         {loading ? (
-          <p className="text-muted">Loading…</p>
+          <div className="loading">Loading games…</div>
         ) : games.length === 0 ? (
-          <p className="text-muted">No games yet. Add one above.</p>
+          <div className="empty-state">
+            <div className="empty-state-icon">&#9917;</div>
+            No games yet. Add one above.
+          </div>
         ) : (
           games.map((g) => (
             <div key={g.id} className="game-row">
               <span className="game-date">{g.date}</span>
+              <span className={`game-location ${g.location}`}>
+                {g.location === 'home' ? 'Home' : 'Away'}
+              </span>
               <span className="game-opponent">
                 {g.location === 'home' ? 'vs' : '@'} {g.opponent}
               </span>

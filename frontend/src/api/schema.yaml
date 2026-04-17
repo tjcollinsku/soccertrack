@@ -1,0 +1,1265 @@
+openapi: 3.0.3
+info:
+  title: SoccerTrack API
+  version: 0.1.0
+  description: Roster, lineups, and stat tracking for a youth soccer team.
+paths:
+  /api/games/:
+    get:
+      operationId: games_list
+      description: CRUD for games + /api/games/{id}/rollup/ for stat totals.
+      tags:
+      - games
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Game'
+          description: ''
+    post:
+      operationId: games_create
+      description: CRUD for games + /api/games/{id}/rollup/ for stat totals.
+      tags:
+      - games
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Game'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Game'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Game'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+          description: ''
+  /api/games/{id}/:
+    get:
+      operationId: games_retrieve
+      description: CRUD for games + /api/games/{id}/rollup/ for stat totals.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this game.
+        required: true
+      tags:
+      - games
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+          description: ''
+    put:
+      operationId: games_update
+      description: CRUD for games + /api/games/{id}/rollup/ for stat totals.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this game.
+        required: true
+      tags:
+      - games
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Game'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Game'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Game'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+          description: ''
+    patch:
+      operationId: games_partial_update
+      description: CRUD for games + /api/games/{id}/rollup/ for stat totals.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this game.
+        required: true
+      tags:
+      - games
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedGame'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedGame'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedGame'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+          description: ''
+    delete:
+      operationId: games_destroy
+      description: CRUD for games + /api/games/{id}/rollup/ for stat totals.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this game.
+        required: true
+      tags:
+      - games
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/games/{id}/end_game/:
+    post:
+      operationId: games_end_game_create
+      description: CRUD for games + /api/games/{id}/rollup/ for stat totals.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this game.
+        required: true
+      tags:
+      - games
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EndGameRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EndGameRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EndGameRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EndGameResponse'
+          description: ''
+  /api/games/{id}/lineup/:
+    get:
+      operationId: games_lineup_retrieve
+      description: CRUD for games + /api/games/{id}/rollup/ for stat totals.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this game.
+        required: true
+      tags:
+      - games
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LineupResponse'
+          description: ''
+  /api/games/{id}/rollup/:
+    get:
+      operationId: games_rollup_retrieve
+      description: CRUD for games + /api/games/{id}/rollup/ for stat totals.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this game.
+        required: true
+      tags:
+      - games
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+          description: ''
+  /api/games/{id}/start_lineup/:
+    post:
+      operationId: games_start_lineup_create
+      description: CRUD for games + /api/games/{id}/rollup/ for stat totals.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this game.
+        required: true
+      tags:
+      - games
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartLineup'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StartLineup'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StartLineup'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartLineupResponse'
+          description: ''
+  /api/games/{id}/stats/:
+    get:
+      operationId: games_stats_retrieve
+      description: CRUD for games + /api/games/{id}/rollup/ for stat totals.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this game.
+        required: true
+      tags:
+      - games
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameStatsResponse'
+          description: ''
+  /api/players/:
+    get:
+      operationId: players_list
+      description: CRUD for roster + /api/players/{id}/minutes/?game={game_id}
+      tags:
+      - players
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Player'
+          description: ''
+    post:
+      operationId: players_create
+      description: CRUD for roster + /api/players/{id}/minutes/?game={game_id}
+      tags:
+      - players
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Player'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Player'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Player'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Player'
+          description: ''
+  /api/players/{id}/:
+    get:
+      operationId: players_retrieve
+      description: CRUD for roster + /api/players/{id}/minutes/?game={game_id}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this player.
+        required: true
+      tags:
+      - players
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Player'
+          description: ''
+    put:
+      operationId: players_update
+      description: CRUD for roster + /api/players/{id}/minutes/?game={game_id}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this player.
+        required: true
+      tags:
+      - players
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Player'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Player'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Player'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Player'
+          description: ''
+    patch:
+      operationId: players_partial_update
+      description: CRUD for roster + /api/players/{id}/minutes/?game={game_id}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this player.
+        required: true
+      tags:
+      - players
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPlayer'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPlayer'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPlayer'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Player'
+          description: ''
+    delete:
+      operationId: players_destroy
+      description: CRUD for roster + /api/players/{id}/minutes/?game={game_id}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this player.
+        required: true
+      tags:
+      - players
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/players/{id}/minutes/:
+    get:
+      operationId: players_minutes_retrieve
+      description: CRUD for roster + /api/players/{id}/minutes/?game={game_id}
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this player.
+        required: true
+      tags:
+      - players
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Player'
+          description: ''
+  /api/players/season_stats/:
+    get:
+      operationId: players_season_stats_retrieve
+      description: CRUD for roster + /api/players/{id}/minutes/?game={game_id}
+      tags:
+      - players
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeasonStatsResponse'
+          description: ''
+  /api/slots/:
+    get:
+      operationId: slots_list
+      description: CRUD for lineup/subbing slots + POST /api/slots/move/.
+      tags:
+      - slots
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlayerGameSlot'
+          description: ''
+    post:
+      operationId: slots_create
+      description: CRUD for lineup/subbing slots + POST /api/slots/move/.
+      tags:
+      - slots
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlayerGameSlot'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PlayerGameSlot'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PlayerGameSlot'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerGameSlot'
+          description: ''
+  /api/slots/{id}/:
+    get:
+      operationId: slots_retrieve
+      description: CRUD for lineup/subbing slots + POST /api/slots/move/.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this player game slot.
+        required: true
+      tags:
+      - slots
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerGameSlot'
+          description: ''
+    put:
+      operationId: slots_update
+      description: CRUD for lineup/subbing slots + POST /api/slots/move/.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this player game slot.
+        required: true
+      tags:
+      - slots
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlayerGameSlot'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PlayerGameSlot'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PlayerGameSlot'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerGameSlot'
+          description: ''
+    patch:
+      operationId: slots_partial_update
+      description: CRUD for lineup/subbing slots + POST /api/slots/move/.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this player game slot.
+        required: true
+      tags:
+      - slots
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPlayerGameSlot'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPlayerGameSlot'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPlayerGameSlot'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerGameSlot'
+          description: ''
+    delete:
+      operationId: slots_destroy
+      description: CRUD for lineup/subbing slots + POST /api/slots/move/.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this player game slot.
+        required: true
+      tags:
+      - slots
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/slots/move/:
+    post:
+      operationId: slots_move_create
+      description: CRUD for lineup/subbing slots + POST /api/slots/move/.
+      tags:
+      - slots
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoveSlot'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MoveSlot'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MoveSlot'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoveResponse'
+          description: ''
+  /api/stats/:
+    get:
+      operationId: stats_list
+      description: CRUD for stat events + POST /api/stats/undo/.
+      tags:
+      - stats
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StatEvent'
+          description: ''
+    post:
+      operationId: stats_create
+      description: CRUD for stat events + POST /api/stats/undo/.
+      tags:
+      - stats
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatEvent'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StatEvent'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StatEvent'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatEvent'
+          description: ''
+  /api/stats/{id}/:
+    get:
+      operationId: stats_retrieve
+      description: CRUD for stat events + POST /api/stats/undo/.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this stat event.
+        required: true
+      tags:
+      - stats
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatEvent'
+          description: ''
+    put:
+      operationId: stats_update
+      description: CRUD for stat events + POST /api/stats/undo/.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this stat event.
+        required: true
+      tags:
+      - stats
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatEvent'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StatEvent'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StatEvent'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatEvent'
+          description: ''
+    patch:
+      operationId: stats_partial_update
+      description: CRUD for stat events + POST /api/stats/undo/.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this stat event.
+        required: true
+      tags:
+      - stats
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedStatEvent'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedStatEvent'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedStatEvent'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatEvent'
+          description: ''
+    delete:
+      operationId: stats_destroy
+      description: CRUD for stat events + POST /api/stats/undo/.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this stat event.
+        required: true
+      tags:
+      - stats
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/stats/undo/:
+    post:
+      operationId: stats_undo_create
+      description: CRUD for stat events + POST /api/stats/undo/.
+      tags:
+      - stats
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UndoStat'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UndoStat'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UndoStat'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UndoResponse'
+          description: ''
+components:
+  schemas:
+    EndGameRequest:
+      type: object
+      properties:
+        final_time:
+          type: string
+      required:
+      - final_time
+    EndGameResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+        closed:
+          type: integer
+      required:
+      - closed
+      - detail
+    Game:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        date:
+          type: string
+          format: date
+        opponent:
+          type: string
+          maxLength: 100
+        location:
+          $ref: '#/components/schemas/LocationEnum'
+      required:
+      - date
+      - id
+      - opponent
+    GameStatsResponse:
+      type: object
+      properties:
+        game_id:
+          type: integer
+        players:
+          type: array
+          items: {}
+      required:
+      - game_id
+      - players
+    LineupEntry:
+      type: object
+      properties:
+        player_id:
+          type: integer
+        position:
+          $ref: '#/components/schemas/PositionEnum'
+      required:
+      - player_id
+      - position
+    LineupResponse:
+      type: object
+      properties:
+        on_field:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlayerGameSlot'
+        bench:
+          type: array
+          items:
+            $ref: '#/components/schemas/Player'
+      required:
+      - bench
+      - on_field
+    LocationEnum:
+      enum:
+      - home
+      - away
+      type: string
+      description: |-
+        * `home` - Home
+        * `away` - Away
+    MoveResponse:
+      type: object
+      properties:
+        current_slot:
+          allOf:
+          - $ref: '#/components/schemas/PlayerGameSlot'
+          nullable: true
+      required:
+      - current_slot
+    MoveSlot:
+      type: object
+      description: Input for POST /api/slots/move/. Wraps PlayerGameSlot.move_player.
+      properties:
+        game:
+          type: integer
+        player:
+          type: integer
+        new_position:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/NewPositionEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        at_time:
+          type: string
+      required:
+      - at_time
+      - game
+      - player
+    NewPositionEnum:
+      enum:
+      - GK
+      - LB
+      - CB1
+      - CB2
+      - RB
+      - LM
+      - CM
+      - RM
+      - LW
+      - ST
+      - RW
+      type: string
+      description: |-
+        * `GK` - Goalkeeper
+        * `LB` - Left Back
+        * `CB1` - Center Back (Left)
+        * `CB2` - Center Back (Right)
+        * `RB` - Right Back
+        * `LM` - Left Mid
+        * `CM` - Center Mid
+        * `RM` - Right Mid
+        * `LW` - Left Wing
+        * `ST` - Striker
+        * `RW` - Right Wing
+    NullEnum:
+      enum:
+      - null
+    PatchedGame:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        date:
+          type: string
+          format: date
+        opponent:
+          type: string
+          maxLength: 100
+        location:
+          $ref: '#/components/schemas/LocationEnum'
+    PatchedPlayer:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        jersey_number:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+    PatchedPlayerGameSlot:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        game:
+          type: integer
+        player:
+          allOf:
+          - $ref: '#/components/schemas/Player'
+          readOnly: true
+        player_id:
+          type: integer
+          writeOnly: true
+        position:
+          $ref: '#/components/schemas/PositionEnum'
+        time_on:
+          type: string
+        time_off:
+          type: string
+          nullable: true
+    PatchedStatEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        game:
+          type: integer
+        player:
+          type: integer
+        stat_type:
+          $ref: '#/components/schemas/StatTypeEnum'
+        game_time:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    Player:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        jersey_number:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+      required:
+      - id
+      - jersey_number
+      - name
+    PlayerGameSlot:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        game:
+          type: integer
+        player:
+          allOf:
+          - $ref: '#/components/schemas/Player'
+          readOnly: true
+        player_id:
+          type: integer
+          writeOnly: true
+        position:
+          $ref: '#/components/schemas/PositionEnum'
+        time_on:
+          type: string
+        time_off:
+          type: string
+          nullable: true
+      required:
+      - game
+      - id
+      - player
+      - player_id
+      - position
+      - time_on
+    PositionEnum:
+      enum:
+      - GK
+      - LB
+      - CB1
+      - CB2
+      - RB
+      - LM
+      - CM
+      - RM
+      - LW
+      - ST
+      - RW
+      type: string
+      description: |-
+        * `GK` - Goalkeeper
+        * `LB` - Left Back
+        * `CB1` - Center Back (Left)
+        * `CB2` - Center Back (Right)
+        * `RB` - Right Back
+        * `LM` - Left Mid
+        * `CM` - Center Mid
+        * `RM` - Right Mid
+        * `LW` - Left Wing
+        * `ST` - Striker
+        * `RW` - Right Wing
+    SeasonStatsResponse:
+      type: object
+      properties:
+        players:
+          type: array
+          items: {}
+      required:
+      - players
+    StartLineup:
+      type: object
+      description: Input for POST /api/games/{id}/start_lineup/.
+      properties:
+        lineup:
+          type: array
+          items:
+            $ref: '#/components/schemas/LineupEntry'
+      required:
+      - lineup
+    StartLineupResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+        count:
+          type: integer
+      required:
+      - count
+      - detail
+    StatEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        game:
+          type: integer
+        player:
+          type: integer
+        stat_type:
+          $ref: '#/components/schemas/StatTypeEnum'
+        game_time:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - game
+      - game_time
+      - id
+      - player
+      - stat_type
+    StatTypeEnum:
+      enum:
+      - Pa
+      - Cm
+      - Dr
+      - Dw
+      - Sh
+      - Fr
+      - Gl
+      - Tk
+      type: string
+      description: |-
+        * `Pa` - Pass
+        * `Cm` - Completed Pass
+        * `Dr` - Dribble
+        * `Dw` - Dribble Won
+        * `Sh` - Shot
+        * `Fr` - On Frame
+        * `Gl` - Goal
+        * `Tk` - Tackle
+    UndoResponse:
+      type: object
+      properties:
+        deleted:
+          type: boolean
+      required:
+      - deleted
+    UndoStat:
+      type: object
+      description: Input for POST /api/stats/undo/. Wraps StatEvent.undo_last.
+      properties:
+        game:
+          type: integer
+        player:
+          type: integer
+        stat_type:
+          $ref: '#/components/schemas/StatTypeEnum'
+      required:
+      - game
+      - player
+      - stat_type
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid

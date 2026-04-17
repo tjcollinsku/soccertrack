@@ -20,6 +20,50 @@ class PlayerViewSet(viewsets.ModelViewSet):
     queryset = Player.objects.all()
     serializer_class = PlayerSerializer
 
+    @extend_schema(responses={200: inline_serializer('SeasonStatsResponse', fields={
+        'players': drf_serializers.ListField(),
+    })})
+    @action(detail=False, methods=['get'], url_path='season_stats')
+    def season_stats(self, request):
+        players = Player.objects.all()
+        all_events = StatEvent.objects.all()
+        all_slots = PlayerGameSlot.objects.all()
+        games_played = {}
+        for slot in all_slots:
+            games_played.setdefault(slot.player_id, set()).add(slot.game_id)
+
+        result = []
+        for player in players:
+            player_events = all_events.filter(player=player)
+            counts = StatEvent.rollup_counts(player_events)
+            total_minutes = 0
+            for game_id in games_played.get(player.id, set()):
+                game = Game.objects.get(pk=game_id)
+                mins = PlayerGameSlot.minutes_played(game, player)
+                total_minutes += int(mins.total_seconds() / 60)
+
+            pa = counts.get('Pa', 0)
+            cm = counts.get('Cm', 0)
+            sh = counts.get('Sh', 0)
+            fr = counts.get('Fr', 0)
+            dr = counts.get('Dr', 0)
+            dw = counts.get('Dw', 0)
+
+            result.append({
+                'player_id': player.id,
+                'name': player.name,
+                'jersey_number': player.jersey_number,
+                'games_played': len(games_played.get(player.id, set())),
+                'minutes_played': total_minutes,
+                **counts,
+                'pass_completion': round(cm / pa * 100, 1) if pa else 0.0,
+                'dribble_success': round(dw / dr * 100, 1) if dr else 0.0,
+                'shot_accuracy': round(fr / sh * 100, 1) if sh else 0.0,
+            })
+
+        result.sort(key=lambda r: r['jersey_number'])
+        return Response({'players': result})
+
     @action(detail=True, methods=['get'])
     def minutes(self, request, pk=None):
         player = self.get_object()

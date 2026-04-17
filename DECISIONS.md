@@ -13,13 +13,173 @@ and **interview framing** (the sentence-or-two version to use under pressure).
 ## Stack
 
 - **Backend:** Django 6.0 + Django REST Framework
-- **Database:** SQLite (dev), Postgres-ready
-- **Frontend:** React + Vite (planned)
-- **Python:** 3.14 in a project-local `.venv`
+- **Database:** SQLite (dev), PostgreSQL (prod / Railway)
+- **Frontend:** React 19 + TypeScript 5.6 + Vite 7
+- **Python:** 3.14 (dev), 3.12 (prod / Nixpacks)
+- **Deploy:** Railway (Nixpacks) + WhiteNoise + gunicorn
+- **Domain:** stats.warriorgirlssc.com
 
 ---
 
 ## Decisions
+
+### Decision — Downgrade Vite 8 → 7 for deploy compatibility
+
+**Why:** Vite 8 requires Node ≥22.12.0, but Railway's Nixpacks builder
+pins Node 22 to an older minor (22.10.0) via its nixpkgs channel snapshot.
+Rather than fighting the Nix package pinning or using a custom Dockerfile,
+downgrading to Vite 7 (which supports Node 18+) removed the tight version
+coupling entirely. The build worked on the first try after the downgrade.
+
+**Tradeoff:** Vite 7 vs 8 has no feature differences that matter for this
+project. When Nixpacks updates its Node 22 package, upgrading back is a
+one-line `npm install vite@^8`.
+
+**Interview framing:** *"The deploy failed because the build tool required
+a newer Node minor than the platform provided. Rather than customizing the
+build image, I downgraded one major version of the bundler — zero
+feature cost, and it decoupled the build from a specific Node patch level.
+Fight the constraint that's cheapest to change."*
+
+---
+
+### Decision — WhiteNoise for static files, not nginx or a CDN
+
+**Why:** Django's built-in `staticfiles` app doesn't serve files
+efficiently in production. The standard answer is nginx in front, but
+that means a separate process or container. WhiteNoise serves compressed
+static files directly from gunicorn — one process, one container, zero
+config. For a low-traffic app like this, it's the right tradeoff.
+
+The React build output (JS/CSS bundles) gets collected into Django's
+`staticfiles/` directory via `collectstatic`, and WhiteNoise serves them
+with proper caching headers and gzip/brotli compression.
+
+**Tradeoff:** At high traffic, a CDN or nginx would be faster. For a
+youth soccer stat tracker used by ~20 parents, WhiteNoise is more than
+enough and eliminates ops complexity.
+
+**Interview framing:** *"I use WhiteNoise to serve static files directly
+from gunicorn — one process, no nginx layer, no CDN configuration.
+It handles compression and cache headers out of the box. For a
+low-traffic app it's the right call; if traffic grew I'd put a CDN in
+front, but the architecture doesn't change."*
+
+---
+
+### Decision — Django serves the React SPA via catch-all route
+
+**Why:** In production, the React app is a set of static files (JS, CSS)
+plus one `index.html`. The standard SPA pattern: serve `index.html` for
+every route that isn't an API call, and let React Router handle the
+client-side routing. Django's catch-all `re_path` does this:
+
+```python
+re_path(r'^(?!api/|admin/).*$', TemplateView.as_view(template_name='index.html'))
+```
+
+This means one deployment artifact (Django + built React), not two
+separate services. The API and the frontend share one domain, no CORS
+issues in production.
+
+**Tradeoff:** Tighter coupling between backend and frontend deploys. For
+a solo project this is a feature, not a bug — one `git push` deploys
+everything.
+
+**Interview framing:** *"The React SPA is served by Django via a catch-all
+route — any path that isn't /api/ or /admin/ returns index.html, and
+React Router takes over client-side. One deploy artifact, one domain,
+no CORS in production."*
+
+---
+
+### Decision — Railway's SSL termination, not Django's SECURE_SSL_REDIRECT
+
+**Why:** Railway's proxy terminates SSL and forwards plain HTTP to the
+application container. If Django also has `SECURE_SSL_REDIRECT = True`,
+it sees an HTTP request and redirects to HTTPS, which Railway's proxy
+receives and forwards as HTTP again — infinite redirect loop.
+
+The fix: set `SECURE_SSL_REDIRECT = False` and instead set
+`SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')` so
+Django trusts the proxy's header and treats the connection as secure
+for CSRF, cookies, and HSTS purposes.
+
+**Tradeoff:** Django trusts the `X-Forwarded-Proto` header, which means
+the proxy must be the only thing setting it. Railway controls the proxy,
+so this is safe.
+
+**Interview framing:** *"Hit an infinite redirect loop on deploy because
+both the reverse proxy and Django were trying to enforce HTTPS. The fix
+was letting the proxy handle SSL termination and telling Django to trust
+the X-Forwarded-Proto header instead of redirecting itself. Standard
+pattern for any PaaS with a reverse proxy layer."*
+
+---
+
+### Decision — Position-aware stat display (GK vs field players)
+
+**Why:** Goalkeepers and field players track different stats. Showing
+tackles and dribbles on a GK card is noise; showing saves on a striker
+is meaningless. The tracker now uses a `GK_STAT_KEYS` set to filter
+which stat buttons appear based on the player's current position. GK
+sees Pa/Cm/Sv; field players see the full 8-stat set.
+
+The filtering is dynamic — if a field player moves to GK mid-game
+(emergency sub), their stat buttons update immediately.
+
+**Tradeoff:** Slightly more complex rendering logic. Worth it — the
+tracker is used during live games where visual noise costs real
+attention.
+
+**Interview framing:** *"Stat buttons are position-aware — goalkeepers
+see a different set than field players, and it switches dynamically on
+position change. The filtering is a simple Set lookup in the render
+loop, but the UX improvement is significant when you're tracking stats
+in real time during a game."*
+
+---
+
+### Decision — Per-position stat breakdown via expandable rows
+
+**Why:** A player who plays 30 minutes at LW and 30 minutes at CM has
+different stats in each position. The summary and season stats pages
+now show expandable rows — click a player to see their stats broken
+down by position. The backend queries `StatEvent` rows that fall within
+each `PlayerGameSlot` time window to attribute stats to the position
+the player was playing when the stat was recorded.
+
+**Tradeoff:** More complex backend query (stats filtered by slot time
+windows) and more frontend state (expanded/collapsed row tracking).
+Worth it — position-level analysis is the whole point of tracking
+formations.
+
+**Interview framing:** *"Stats are attributed to the position the player
+was playing when the event happened, not just to the player. The backend
+filters stat events by each slot's time window, so a player who moved
+from wing to midfield mid-game gets separate stat lines for each
+position. Click to expand in the UI."*
+
+---
+
+### Decision — Game selector dropdown on Stats page
+
+**Why:** The Stats page originally only showed season totals. Parents
+want to review individual past games too. Rather than a separate page
+per game, a dropdown at the top switches between "Season Total" and
+any completed game. Season view fetches from `/api/players/season_stats/`;
+game view fetches from `/api/games/{id}/stats/`. Same table component,
+different data source.
+
+**Tradeoff:** One page doing double duty. Clean enough for now; if the
+views diverge significantly later, split them.
+
+**Interview framing:** *"The Stats page serves both season-wide and
+per-game views via a dropdown selector. Same table layout, different
+backend endpoint. Keeps the UI simple — parents don't need to learn
+two different pages."*
+
+---
 
 ### Decision — FPL-inspired pitch layout with row-based flexbox, not CSS grid
 
@@ -659,3 +819,10 @@ navigation doesn't reset it.
   `DurationField` over `CharField`, stat rollup at read time, DB-layer
   uniqueness constraints, `move_player` helper, strict insert-or-delete
   on stat events.
+- **2026-04-16** — Added feature decisions: position-aware stat display
+  (GK vs field), per-position stat breakdown with expandable rows, game
+  selector dropdown on Stats page.
+- **2026-04-16** — Added deploy decisions: Vite 8→7 downgrade for Node
+  compat, WhiteNoise static serving, Django catch-all for SPA, Railway
+  SSL termination (no SECURE_SSL_REDIRECT). App deployed to
+  stats.warriorgirlssc.com.

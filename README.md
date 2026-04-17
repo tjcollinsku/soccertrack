@@ -5,7 +5,9 @@ roster, lineups with open subbing, and per-player/per-position stat
 tracking. Built as a full-stack learning project with a focus on
 production-shaped backend engineering choices.
 
-**Stack:** Django 6 · DRF · drf-spectacular · React 19 · TypeScript · Vite
+**Live at:** [stats.warriorgirlssc.com](https://stats.warriorgirlssc.com)
+
+**Stack:** Django 6 · DRF · drf-spectacular · React 19 · TypeScript · Vite 7 · PostgreSQL · Railway
 
 ---
 
@@ -31,8 +33,13 @@ production-shaped backend engineering choices.
   - **Live Tracker** — FPL-inspired pitch layout with per-player stat
     +/- buttons, game clock with sessionStorage persistence, substitution
     flow, and Game Over lifecycle
-  - **Game Summary** — per-player stats table with calculated percentages
-  - **Season Stats** — aggregated stats across all completed games
+  - **Game Summary** — per-player stats table with expandable
+    per-position stat breakdown
+  - **Season Stats** — aggregated stats across all completed games,
+    with dropdown to view individual past games and per-position
+    breakdown
+- **Position-aware stat display** — GK sees Pa/Cm/Sv; field players
+  see Pa/Cm/Dr/Dw/Sh/Fr/Gl/Tk. Switches dynamically on position change.
 - **Warriors theme** — red/black color scheme with pitch-realistic
   gradient, mow-line stripes, and visible pitch markings (halfway line,
   center circle, penalty boxes)
@@ -111,5 +118,7 @@ python manage.py test tracker -v 2
 - [x] Game Summary page (per-player stats table with calculated percentages)
 - [x] Season Stats page (aggregated stats across all games)
 - [x] Warriors color scheme (red/black theme with FPL-inspired pitch layout)
-- [ ] Docker + deploy to Railway
-- [ ] Season history / game archive views
+- [x] Sv (Save) stat type for goalkeepers + position-aware stat display
+- [x] Per-position stat breakdown (expandable rows in Summary + Stats)
+- [x] Game selector dropdown on Stats page (season total + individual games)
+- [x] Deploy to Railway with PostgreSQL + custom domain (stats.warriorgirlssc.com)

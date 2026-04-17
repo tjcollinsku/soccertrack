@@ -105,9 +105,9 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# The built React app lives in frontend/dist/assets/ — tell Django about it
+# The built React app lives in frontend/dist/ — tell Django about it
 STATICFILES_DIRS = [
-    BASE_DIR / 'frontend' / 'dist' / 'assets',
+    ('assets', BASE_DIR / 'frontend' / 'dist' / 'assets'),
 ]
 
 STORAGES = {

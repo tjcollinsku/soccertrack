@@ -15,7 +15,20 @@ STAT_ROLLUP = {
 }
 
 
+class Team(models.Model):
+    name = models.CharField(max_length=120, unique=True)
+    slug = models.SlugField(max_length=140, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['name']
+
+
 class Player(models.Model):
+    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='players')
     name = models.CharField(max_length=100)
     jersey_number = models.PositiveIntegerField()
 
@@ -24,6 +37,12 @@ class Player(models.Model):
 
     class Meta:
         ordering = ['jersey_number']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['team', 'jersey_number'],
+                name='unique_jersey_per_team',
+            ),
+        ]
 
 
 class Game(models.Model):
@@ -31,6 +50,7 @@ class Game(models.Model):
     AWAY = 'away'
     LOCATION_CHOICES = [(HOME, 'Home'), (AWAY, 'Away')]
 
+    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='games')
     date = models.DateField()
     opponent = models.CharField(max_length=100)
     location = models.CharField(max_length=4, choices=LOCATION_CHOICES, default=HOME)

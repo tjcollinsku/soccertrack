@@ -4,7 +4,7 @@ from django.db import IntegrityError, transaction
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from .models import Game, Player, PlayerGameSlot, StatEvent
+from .models import Game, Player, PlayerGameSlot, StatEvent, Team
 
 
 def mmss(minutes, seconds=0):
@@ -12,11 +12,16 @@ def mmss(minutes, seconds=0):
     return timedelta(minutes=minutes, seconds=seconds)
 
 
+def make_team(name='Warriors', slug='warriors'):
+    return Team.objects.create(name=name, slug=slug)
+
+
 class MovePlayerTests(TestCase):
     def setUp(self):
-        self.game = Game.objects.create(date=date(2026, 4, 20), opponent='Tipp City')
-        self.alice = Player.objects.create(name='Alice', jersey_number=7)
-        self.bob = Player.objects.create(name='Bob', jersey_number=9)
+        self.team = make_team()
+        self.game = Game.objects.create(team=self.team, date=date(2026, 4, 20), opponent='Tipp City')
+        self.alice = Player.objects.create(team=self.team, name='Alice', jersey_number=7)
+        self.bob = Player.objects.create(team=self.team, name='Bob', jersey_number=9)
 
     def test_move_closes_previous_slot_and_opens_new_one(self):
         PlayerGameSlot.move_player(self.game, self.alice, 'LM', mmss(0))
@@ -42,9 +47,10 @@ class MovePlayerTests(TestCase):
 
 class UniquenessTests(TestCase):
     def setUp(self):
-        self.game = Game.objects.create(date=date(2026, 4, 20), opponent='Tipp City')
-        self.alice = Player.objects.create(name='Alice', jersey_number=7)
-        self.bob = Player.objects.create(name='Bob', jersey_number=9)
+        self.team = make_team()
+        self.game = Game.objects.create(team=self.team, date=date(2026, 4, 20), opponent='Tipp City')
+        self.alice = Player.objects.create(team=self.team, name='Alice', jersey_number=7)
+        self.bob = Player.objects.create(team=self.team, name='Bob', jersey_number=9)
 
     def test_two_active_players_at_same_position_rejected(self):
         PlayerGameSlot.objects.create(
@@ -83,8 +89,9 @@ class UniquenessTests(TestCase):
 
 class MinutesPlayedTests(TestCase):
     def setUp(self):
-        self.game = Game.objects.create(date=date(2026, 4, 20), opponent='Tipp City')
-        self.alice = Player.objects.create(name='Alice', jersey_number=7)
+        self.team = make_team()
+        self.game = Game.objects.create(team=self.team, date=date(2026, 4, 20), opponent='Tipp City')
+        self.alice = Player.objects.create(team=self.team, name='Alice', jersey_number=7)
 
     def test_sums_closed_slots(self):
         PlayerGameSlot.objects.create(
@@ -127,8 +134,9 @@ class MinutesPlayedTests(TestCase):
 
 class StatEventTests(TestCase):
     def setUp(self):
-        self.game = Game.objects.create(date=date(2026, 4, 20), opponent='Tipp City')
-        self.alice = Player.objects.create(name='Alice', jersey_number=7)
+        self.team = make_team()
+        self.game = Game.objects.create(team=self.team, date=date(2026, 4, 20), opponent='Tipp City')
+        self.alice = Player.objects.create(team=self.team, name='Alice', jersey_number=7)
 
     def test_undo_last_deletes_most_recent(self):
         first = StatEvent.objects.create(
@@ -190,8 +198,9 @@ class StatEventTests(TestCase):
 class APITests(TestCase):
     def setUp(self):
         self.client = APIClient()
-        self.game = Game.objects.create(date=date(2026, 4, 20), opponent='Tipp City')
-        self.alice = Player.objects.create(name='Alice', jersey_number=7)
+        self.team = make_team()
+        self.game = Game.objects.create(team=self.team, date=date(2026, 4, 20), opponent='Tipp City')
+        self.alice = Player.objects.create(team=self.team, name='Alice', jersey_number=7)
 
     def test_list_players(self):
         resp = self.client.get('/api/players/')
@@ -201,6 +210,7 @@ class APITests(TestCase):
 
     def test_create_game(self):
         resp = self.client.post('/api/games/', {
+            'team': self.team.id,
             'date': '2026-05-01', 'opponent': 'Troy', 'location': 'away',
         })
         self.assertEqual(resp.status_code, 201)
@@ -247,3 +257,62 @@ class APITests(TestCase):
         self.assertEqual(counts['Gl'], 1)
         self.assertEqual(counts['Sh'], 1)  # rolled up from Gl
         self.assertEqual(counts['Pa'], 1)  # rolled up from Cm
+
+
+class TeamScopingTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.team_a = Team.objects.create(name='Team A', slug='team-a')
+        self.team_b = Team.objects.create(name='Team B', slug='team-b')
+        self.a7 = Player.objects.create(team=self.team_a, name='Alice', jersey_number=7)
+        self.b7 = Player.objects.create(team=self.team_b, name='Ben', jersey_number=7)
+        self.game_a = Game.objects.create(team=self.team_a, date=date(2026, 4, 20), opponent='Tipp City')
+        self.game_b = Game.objects.create(team=self.team_b, date=date(2026, 4, 20), opponent='Troy')
+
+    def test_same_jersey_number_allowed_on_different_teams(self):
+        # Already created in setUp — just confirm both exist
+        self.assertEqual(
+            Player.objects.filter(jersey_number=7).count(), 2,
+        )
+
+    def test_duplicate_jersey_on_same_team_rejected(self):
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                Player.objects.create(team=self.team_a, name='Amy', jersey_number=7)
+
+    def test_player_list_filters_by_team(self):
+        resp = self.client.get(f'/api/players/?team={self.team_a.id}')
+        self.assertEqual(resp.status_code, 200)
+        names = [p['name'] for p in resp.json()]
+        self.assertEqual(names, ['Alice'])
+
+    def test_game_list_filters_by_team(self):
+        resp = self.client.get(f'/api/games/?team={self.team_b.id}')
+        self.assertEqual(resp.status_code, 200)
+        opponents = [g['opponent'] for g in resp.json()]
+        self.assertEqual(opponents, ['Troy'])
+
+    def test_stat_rejected_when_player_and_game_on_different_teams(self):
+        # game_a belongs to team_a; b7 belongs to team_b
+        resp = self.client.post('/api/stats/', {
+            'game': self.game_a.id, 'player': self.b7.id,
+            'stat_type': 'Pa', 'game_time': '00:10:00',
+        }, format='json')
+        self.assertEqual(resp.status_code, 400)
+
+    def test_start_lineup_rejects_cross_team_player(self):
+        # Build 10 team_a players + 1 team_b player into a lineup for game_a
+        for n in range(1, 11):
+            Player.objects.create(team=self.team_a, name=f'P{n}', jersey_number=n + 10)
+        team_a_players = list(Player.objects.filter(team=self.team_a))
+        positions = ['GK', 'LB', 'CB1', 'CB2', 'RB', 'LM', 'CM', 'RM', 'LW', 'ST']
+        lineup = [{'player_id': p.id, 'position': pos}
+                  for p, pos in zip(team_a_players[:10], positions)]
+        lineup.append({'player_id': self.b7.id, 'position': 'RW'})  # cross-team
+
+        resp = self.client.post(
+            f'/api/games/{self.game_a.id}/start_lineup/',
+            {'lineup': lineup}, format='json',
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(PlayerGameSlot.objects.count(), 0)

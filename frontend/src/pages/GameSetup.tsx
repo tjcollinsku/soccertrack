@@ -32,8 +32,18 @@ export default function GameSetup() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    api.GET('/api/players/').then(({ data }) => setPlayers(data ?? []));
-  }, []);
+    async function loadPlayersForGame() {
+      const { data: game } = await api.GET('/api/games/{id}/', {
+        params: { path: { id: Number(id) } },
+      });
+      if (!game) return;
+      const { data: roster } = await api.GET('/api/players/', {
+        params: { query: { team: game.team } as never },
+      });
+      setPlayers(roster ?? []);
+    }
+    loadPlayersForGame();
+  }, [id]);
 
   const assignedPlayerIds = new Set(
     Object.values(assignments).map((p) => p.id),

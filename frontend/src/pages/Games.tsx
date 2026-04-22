@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import type { components } from '../api/schema';
+import { useTeam } from '../state/team';
 
 type Game = components['schemas']['Game'];
 
 export default function Games() {
+  const { activeTeam } = useTeam();
   const [games, setGames] = useState<Game[]>([]);
   const [opponent, setOpponent] = useState('');
   const [date, setDate] = useState('');
@@ -14,8 +16,11 @@ export default function Games() {
   const [error, setError] = useState<string | null>(null);
 
   async function load() {
+    if (!activeTeam) return;
     setLoading(true);
-    const { data, error } = await api.GET('/api/games/');
+    const { data, error } = await api.GET('/api/games/', {
+      params: { query: { team: activeTeam.id } as never },
+    });
     if (error) {
       setError('Failed to load games');
     } else {
@@ -27,16 +32,21 @@ export default function Games() {
 
   useEffect(() => {
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTeam?.id]);
 
   async function addGame(e: React.FormEvent) {
     e.preventDefault();
+    if (!activeTeam) {
+      setError('Select a team first.');
+      return;
+    }
     if (!opponent.trim() || !date) {
       setError('Opponent and date are required.');
       return;
     }
     const { error } = await api.POST('/api/games/', {
-      body: { date, opponent: opponent.trim(), location } as never,
+      body: { team: activeTeam.id, date, opponent: opponent.trim(), location } as never,
     });
     if (error) {
       setError('Failed to create game');

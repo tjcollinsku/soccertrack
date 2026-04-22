@@ -1,0 +1,11 @@
+- navigation [ref=e3]:
+  - link "Soccer Track" [ref=e4] [cursor=pointer]:
+    - /url: /games
+    - text: Soccer
+    - generic [ref=e5]: Track
+  - link "Games" [ref=e6] [cursor=pointer]:
+    - /url: /games
+  - link "Roster" [ref=e7] [cursor=pointer]:
+    - /url: /roster
+  - link "Stats" [ref=e8] [cursor=pointer]:
+    - /url: /stats

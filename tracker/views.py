@@ -5,7 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, inline_serializer
 
-from .models import Game, Player, PlayerGameSlot, StatEvent, STAT_ROLLUP
+from .models import Game, Player, PlayerGameSlot, StatEvent, Team, STAT_ROLLUP
 from .serializers import (
     GameSerializer,
     MoveSlotSerializer,
@@ -13,8 +13,15 @@ from .serializers import (
     PlayerSerializer,
     StartLineupSerializer,
     StatEventSerializer,
+    TeamSerializer,
     UndoStatSerializer,
 )
+
+
+class TeamViewSet(viewsets.ModelViewSet):
+    """CRUD for teams."""
+    queryset = Team.objects.all()
+    serializer_class = TeamSerializer
 
 
 class PlayerViewSet(viewsets.ModelViewSet):
@@ -22,14 +29,27 @@ class PlayerViewSet(viewsets.ModelViewSet):
     queryset = Player.objects.all()
     serializer_class = PlayerSerializer
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        team_id = self.request.query_params.get('team')
+        if team_id:
+            qs = qs.filter(team_id=team_id)
+        return qs
+
     @extend_schema(responses={200: inline_serializer('SeasonStatsResponse', fields={
         'players': drf_serializers.ListField(),
     })})
     @action(detail=False, methods=['get'], url_path='season_stats')
     def season_stats(self, request):
         players = Player.objects.all()
+        team_id = request.query_params.get('team')
+        if team_id:
+            players = players.filter(team_id=team_id)
         all_events = StatEvent.objects.all()
         all_slots = PlayerGameSlot.objects.all()
+        if team_id:
+            all_events = all_events.filter(player__team_id=team_id)
+            all_slots = all_slots.filter(player__team_id=team_id)
         games_played = {}
         for slot in all_slots:
             games_played.setdefault(slot.player_id, set()).add(slot.game_id)
@@ -129,6 +149,13 @@ class GameViewSet(viewsets.ModelViewSet):
     """CRUD for games + /api/games/{id}/rollup/ for stat totals."""
     queryset = Game.objects.all()
     serializer_class = GameSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        team_id = self.request.query_params.get('team')
+        if team_id:
+            qs = qs.filter(team_id=team_id)
+        return qs
 
     @action(detail=True, methods=['get'])
     def rollup(self, request, pk=None):
@@ -253,6 +280,13 @@ class GameViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        foreign = [e['player_id'] for e in entries if e['player_id'].team_id != game.team_id]
+        if foreign:
+            return Response(
+                {'detail': f'Player(s) not on this game\'s team: {", ".join(str(p) for p in foreign)}.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         if game.slots.filter(time_off__isnull=True).exists():
             return Response(
                 {'detail': 'Lineup already set. Clear existing slots first.'},
@@ -307,7 +341,7 @@ class GameViewSet(viewsets.ModelViewSet):
             game=game, time_off__isnull=True,
         ).select_related('player')
         on_field_ids = set(on_field.values_list('player_id', flat=True))
-        all_players = Player.objects.all()
+        all_players = Player.objects.filter(team=game.team)
         bench = [p for p in all_players if p.id not in on_field_ids]
 
         return Response({

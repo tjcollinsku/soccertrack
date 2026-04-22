@@ -387,7 +387,7 @@ export default function GameTracker() {
                   const isGK = pos === 'GK';
                   const visibleStats = isGK
                     ? STAT_LABELS.filter(s => GK_STAT_KEYS.has(s.key))
-                    : STAT_LABELS;
+                    : STAT_LABELS.filter(s => s.key !== 'Sv');
 
                   const isSelected = selectedFieldPlayerId === playerId;
                   const isTarget = hasSelection && !isSelected && !gameOver;
@@ -399,7 +399,7 @@ export default function GameTracker() {
                       className={`player-card${isSelected ? ' selected' : ''}${isTarget ? ' sub-target' : ''}`}
                     >
                       <div className="card-badge">{pos}</div>
-                      <div className="card-name">#{player.jersey_number} {player.name}</div>
+                      <div className="card-name"><span className="jersey">#{player.jersey_number}</span>{player.name}</div>
                       <div className="card-time">{minutes}′</div>
                       <div className="card-stats">
                         {visibleStats.map(({ key, label }) => (

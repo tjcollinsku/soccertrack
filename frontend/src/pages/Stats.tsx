@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import type { components } from '../api/schema';
+import { useTeam } from '../state/team';
 
 type Game = components['schemas']['Game'];
 
@@ -80,6 +81,7 @@ const GAME_COLS: { key: string; label: string; isPct?: boolean }[] = [
 ];
 
 export default function Stats() {
+  const { activeTeam } = useTeam();
   const [games, setGames] = useState<Game[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string>('season');
   const [players, setPlayers] = useState<PlayerStats[]>([]);
@@ -87,24 +89,36 @@ export default function Stats() {
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
-  // Load games list on mount
+  // Reset to season view whenever team changes
   useEffect(() => {
+    setSelectedGameId('season');
+  }, [activeTeam?.id]);
+
+  // Load games list whenever team changes
+  useEffect(() => {
+    if (!activeTeam) return;
     async function loadGames() {
-      const { data } = await api.GET('/api/games/');
+      const { data } = await api.GET('/api/games/', {
+        params: { query: { team: activeTeam!.id } as never },
+      });
       if (data) setGames(data);
     }
     loadGames();
-  }, []);
+  }, [activeTeam?.id]);
 
-  // Load stats whenever selection changes
+  // Load stats whenever selection or team changes
   useEffect(() => {
+    if (!activeTeam) return;
     async function loadStats() {
       setLoading(true);
       setError(null);
       setExpanded(new Set());
 
       if (selectedGameId === 'season') {
-        const { data, error } = await api.GET('/api/players/season_stats/' as never);
+        const { data, error } = await api.GET(
+          '/api/players/season_stats/' as never,
+          { params: { query: { team: activeTeam!.id } } } as never,
+        );
         if (error) {
           setError('Failed to load season stats');
         } else if (data) {
@@ -124,7 +138,7 @@ export default function Stats() {
       setLoading(false);
     }
     loadStats();
-  }, [selectedGameId]);
+  }, [selectedGameId, activeTeam?.id]);
 
   function toggleExpand(playerId: number) {
     setExpanded((prev) => {

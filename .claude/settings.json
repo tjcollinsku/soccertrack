@@ -28,7 +28,17 @@
       "Bash(python manage.py collectstatic --noinput)",
       "Read(//tmp/warriorgirlssc/**)",
       "Read(//c/Users/tjcol/OneDrive/Documents/Claude/Projects/Job Search/warriorgirlssc/**)",
-      "Bash(python -c \"from django.core.management.utils import get_random_secret_key; print\\(get_random_secret_key\\(\\)\\)\")"
+      "Bash(python -c \"from django.core.management.utils import get_random_secret_key; print\\(get_random_secret_key\\(\\)\\)\")",
+      "Bash(npm install *)",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "mcp__plugin_playwright_playwright__browser_console_messages",
+      "Bash(python manage.py test tracker)",
+      "Bash(curl -s http://127.0.0.1:8000/api/teams/)",
+      "Bash(curl -s \"http://127.0.0.1:8000/api/players/?team=1\")",
+      "Bash(curl -s \"http://127.0.0.1:8000/api/players/?team=2\")",
+      "Bash(curl -s \"http://127.0.0.1:8000/api/games/?team=2\")",
+      "Bash(curl -s \"http://127.0.0.1:8000/api/games/?team=1\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\tjcol\\OneDrive\\Documents\\Claude\\Projects\\Job Search\\warriorgirlssc"

@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import type { components } from '../api/schema';
+import { useTeam } from '../state/team';
 
 type Player = components['schemas']['Player'];
 
 export default function Roster() {
+  const { activeTeam } = useTeam();
   const [players, setPlayers] = useState<Player[]>([]);
   const [name, setName] = useState('');
   const [jersey, setJersey] = useState('');
@@ -12,8 +14,11 @@ export default function Roster() {
   const [error, setError] = useState<string | null>(null);
 
   async function load() {
+    if (!activeTeam) return;
     setLoading(true);
-    const { data, error } = await api.GET('/api/players/');
+    const { data, error } = await api.GET('/api/players/', {
+      params: { query: { team: activeTeam.id } as never },
+    });
     if (error) {
       setError('Failed to load players');
     } else {
@@ -25,17 +30,22 @@ export default function Roster() {
 
   useEffect(() => {
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTeam?.id]);
 
   async function addPlayer(e: React.FormEvent) {
     e.preventDefault();
+    if (!activeTeam) {
+      setError('Select a team first.');
+      return;
+    }
     const jerseyNum = Number(jersey);
     if (!name.trim() || !Number.isInteger(jerseyNum) || jerseyNum < 0) {
       setError('Name and a non-negative jersey number are required.');
       return;
     }
     const { error } = await api.POST('/api/players/', {
-      body: { name: name.trim(), jersey_number: jerseyNum } as never,
+      body: { team: activeTeam.id, name: name.trim(), jersey_number: jerseyNum } as never,
     });
     if (error) {
       setError('Failed to create player');

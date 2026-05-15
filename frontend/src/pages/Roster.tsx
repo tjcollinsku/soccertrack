@@ -70,12 +70,12 @@ export default function Roster() {
           style={{ width: 80 }}
         />
         <input
-          placeholder="Name"
+          placeholder="Player Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           style={{ flex: 1, minWidth: 120 }}
         />
-        <button type="submit" className="btn btn-primary">Add</button>
+        <button type="submit" className="btn btn-primary">Add Player</button>
       </form>
 
       <div className="surface">
@@ -83,14 +83,18 @@ export default function Roster() {
           <div className="loading">Loading roster…</div>
         ) : players.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">&#128085;</div>
-            No players yet. Add one above.
+            <span className="empty-state-icon">👥</span>
+            <div className="empty-state-title">Squad is Empty</div>
+            <p>Add your first player above to build the roster.</p>
           </div>
         ) : (
           players.map((p) => (
             <div key={p.id} className="roster-item">
               <span className="roster-jersey">{p.jersey_number}</span>
-              <span className="roster-name">{p.name}</span>
+              <div className="roster-info">
+                <span className="roster-name">{p.name}</span>
+                <span className="roster-number">No. {p.jersey_number}</span>
+              </div>
             </div>
           ))
         )}

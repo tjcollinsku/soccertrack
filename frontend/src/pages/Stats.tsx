@@ -80,6 +80,20 @@ const GAME_COLS: { key: string; label: string; isPct?: boolean }[] = [
   { key: 'Sv', label: 'Sv' },
 ];
 
+function PctCell({ value }: { value: number }) {
+  const pct = Math.min(100, Math.max(0, value));
+  return (
+    <td className="pct-cell">
+      <div className="pct-inner">
+        <span className="pct-val">{pct}%</span>
+        <div className="pct-bar">
+          <div className="pct-bar-fill" style={{ width: `${pct}%` }} />
+        </div>
+      </div>
+    </td>
+  );
+}
+
 export default function Stats() {
   const { activeTeam } = useTeam();
   const [games, setGames] = useState<Game[]>([]);
@@ -89,12 +103,10 @@ export default function Stats() {
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
-  // Reset to season view whenever team changes
   useEffect(() => {
     setSelectedGameId('season');
   }, [activeTeam?.id]);
 
-  // Load games list whenever team changes
   useEffect(() => {
     if (!activeTeam) return;
     async function loadGames() {
@@ -106,7 +118,6 @@ export default function Stats() {
     loadGames();
   }, [activeTeam?.id]);
 
-  // Load stats whenever selection or team changes
   useEffect(() => {
     if (!activeTeam) return;
     async function loadStats() {
@@ -153,7 +164,6 @@ export default function Stats() {
   const COLS = isSeason ? SEASON_COLS : GAME_COLS;
   const STAT_KEYS = COLS.filter(c => c.key !== 'jersey_number' && c.key !== 'name');
 
-  // Compute totals
   const totals: Record<string, number> = {};
   for (const col of COLS) {
     if (col.key === 'name' || col.key === 'jersey_number') continue;
@@ -175,8 +185,8 @@ export default function Stats() {
   totals.shot_accuracy = totalSh ? Math.round(totalFr / totalSh * 1000) / 10 : 0;
   totals.dribble_success = totalDr ? Math.round(totalDw / totalDr * 1000) / 10 : 0;
 
-  // Find selected game for subtitle
   const selectedGame = games.find(g => String(g.id) === selectedGameId);
+  const maxGoals = Math.max(0, ...players.map(p => p.Gl));
 
   return (
     <div className="page">
@@ -204,11 +214,15 @@ export default function Stats() {
       )}
 
       {loading ? (
-        <p className="text-muted">Loading…</p>
+        <div className="loading">Loading stats…</div>
       ) : error ? (
         <p className="error">{error}</p>
       ) : players.length === 0 ? (
-        <p className="text-muted">No stats recorded{isSeason ? ' yet. Play some games first.' : ' for this game.'}</p>
+        <div className="empty-state">
+          <span className="empty-state-icon">📊</span>
+          <div className="empty-state-title">No Stats Yet</div>
+          <p>{isSeason ? 'Play some games first to see season stats here.' : 'No stats recorded for this game.'}</p>
+        </div>
       ) : (
         <div className="surface" style={{ overflowX: 'auto', padding: 0 }}>
           <table className="stats-table">
@@ -223,27 +237,33 @@ export default function Stats() {
               {players.map((p) => {
                 const isExpanded = expanded.has(p.player_id);
                 const hasPositions = p.positions && p.positions.length > 0;
+                const isTopScorer = maxGoals > 0 && p.Gl === maxGoals;
                 return (
                   <>
                     <tr
                       key={p.player_id}
                       onClick={() => hasPositions && toggleExpand(p.player_id)}
-                      className={`${hasPositions ? 'expandable-row' : ''} ${isExpanded ? 'expanded' : ''}`}
+                      className={`${hasPositions ? 'expandable-row' : ''} ${isExpanded ? 'expanded' : ''} ${isTopScorer ? 'top-scorer' : ''}`}
                     >
                       {COLS.map((col) => {
                         const val = ((p as unknown as Record<string, number>)[col.key] as number) || 0;
                         const isGoal = col.key === 'Gl' && val > 0;
                         const isName = col.key === 'name';
-                        const display = col.isPct ? `${val}%` : isName ? p.name : val;
+
+                        if (col.isPct) {
+                          return <PctCell key={col.key} value={val} />;
+                        }
+
+                        const display = isName ? p.name : val;
                         return (
                           <td
                             key={col.key}
-                            className={`${isName ? 'left' : ''} ${isGoal ? 'goal-cell' : ''} ${col.isPct ? 'pct-cell' : ''}`}
+                            className={`${isName ? 'left' : ''} ${isGoal ? 'goal-cell' : ''}`}
                           >
                             {isName && hasPositions && (
                               <span className="expand-arrow">{isExpanded ? '▼' : '▶'}</span>
                             )}
-                            {display}
+                            {isGoal && val > 0 ? `⚽ ${val}` : display}
                           </td>
                         );
                       })}
@@ -261,11 +281,21 @@ export default function Stats() {
                           } else {
                             val = (pos as unknown as Record<string, number>)[col.key] ?? 0;
                           }
-                          const display = col.isPct ? `${val}%` : (col.key === 'games_played' ? '—' : val);
+                          if (col.isPct) {
+                            return (
+                              <td key={col.key} className="pct-cell">
+                                <div className="pct-inner">
+                                  <span className="pct-val">{val}%</span>
+                                  <div className="pct-bar">
+                                    <div className="pct-bar-fill" style={{ width: `${Math.min(100, val)}%` }} />
+                                  </div>
+                                </div>
+                              </td>
+                            );
+                          }
+                          const display = col.key === 'games_played' ? '—' : val;
                           return (
-                            <td key={col.key} className={col.isPct ? 'pct-cell' : ''}>
-                              {display}
-                            </td>
+                            <td key={col.key}>{display}</td>
                           );
                         })}
                       </tr>
@@ -278,8 +308,10 @@ export default function Stats() {
                 <td className="left">TOTAL</td>
                 {COLS.slice(2).map((col) => {
                   const val = totals[col.key] ?? 0;
-                  const display = col.isPct ? `${val}%` : val;
-                  return <td key={col.key}>{display}</td>;
+                  if (col.isPct) {
+                    return <PctCell key={col.key} value={val} />;
+                  }
+                  return <td key={col.key}>{val}</td>;
                 })}
               </tr>
             </tbody>

@@ -14,6 +14,7 @@ export default function App() {
       <TeamProvider>
         <nav className="nav">
           <NavLink to="/games" className="nav-brand" end>
+            <span className="brand-ball">⚽</span>
             Soccer<span className="brand-accent">Track</span>
           </NavLink>
           <NavLink to="/games">Games</NavLink>

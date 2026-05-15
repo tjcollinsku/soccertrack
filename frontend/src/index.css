@@ -648,15 +648,23 @@ select {
   box-shadow: var(--shadow-xl), inset 0 0 80px rgba(0, 0, 0, 0.2), 0 0 60px rgba(47, 158, 74, 0.06);
   overflow: hidden;
 }
-.field-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: repeat(4, auto);
-  gap: 10px 8px;
+.field-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   position: relative;
   z-index: 1;
   max-width: 720px;
   margin: 0 auto;
+}
+.field-row {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+.field-row .setup-slot {
+  flex: 0 0 160px;
+  min-height: 80px;
 }
 
 /* ══════════════════════════════════════════

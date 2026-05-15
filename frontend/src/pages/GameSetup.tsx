@@ -100,28 +100,30 @@ export default function GameSetup() {
       </p>
 
       <div className="field" style={{ marginBottom: 16 }}>
-        <div className="field-grid" style={{ gridTemplateRows: 'repeat(4, 80px)' }}>
-          {FORMATION.map(({ pos, label, row, col }) => {
-            const player = assignments[pos];
-            const isSelected = selectedPos === pos;
-            const className = `setup-slot ${player ? 'filled' : 'empty'} ${isSelected ? 'selected' : ''}`;
-            return (
-              <div
-                key={pos}
-                onClick={() => handleSlotClick(pos)}
-                className={className}
-                style={{ gridRow: row, gridColumn: col }}
-              >
-                <span className="slot-pos">{label}</span>
-                {player && (
-                  <>
-                    <span className="slot-jersey">#{player.jersey_number}</span>
-                    <span className="slot-name">{player.name}</span>
-                  </>
-                )}
-              </div>
-            );
-          })}
+        <div className="field-rows">
+          {[1, 2, 3, 4].map((rowNum) => (
+            <div key={rowNum} className="field-row">
+              {FORMATION.filter((f) => f.row === rowNum).map(({ pos, label }) => {
+                const player = assignments[pos];
+                const isSelected = selectedPos === pos;
+                return (
+                  <div
+                    key={pos}
+                    onClick={() => handleSlotClick(pos)}
+                    className={`setup-slot ${player ? 'filled' : 'empty'} ${isSelected ? 'selected' : ''}`}
+                  >
+                    <span className="slot-pos">{label}</span>
+                    {player && (
+                      <>
+                        <span className="slot-jersey">#{player.jersey_number}</span>
+                        <span className="slot-name">{player.name}</span>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
         </div>
       </div>
 

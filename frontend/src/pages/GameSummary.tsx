@@ -57,8 +57,21 @@ const COLS: { key: keyof PlayerStats; label: string; isPct?: boolean }[] = [
   { key: 'Sv', label: 'Sv' },
 ];
 
-// Map position stat keys to the same column order as COLS (skipping jersey/name)
 const STAT_KEYS = COLS.filter(c => c.key !== 'jersey_number' && c.key !== 'name');
+
+function PctCell({ value }: { value: number }) {
+  const pct = Math.min(100, Math.max(0, value));
+  return (
+    <td className="pct-cell">
+      <div className="pct-inner">
+        <span className="pct-val">{pct}%</span>
+        <div className="pct-bar">
+          <div className="pct-bar-fill" style={{ width: `${pct}%` }} />
+        </div>
+      </div>
+    </td>
+  );
+}
 
 export default function GameSummary() {
   const { id } = useParams<{ id: string }>();
@@ -92,7 +105,7 @@ export default function GameSummary() {
     });
   }
 
-  if (loading) return <div className="page"><p className="text-muted">Loading…</p></div>;
+  if (loading) return <div className="page"><div className="loading">Loading summary…</div></div>;
   if (error) return <div className="page"><p className="error">{error}</p></div>;
 
   const totals: Partial<Record<keyof PlayerStats, number>> = {};
@@ -116,15 +129,21 @@ export default function GameSummary() {
   totals.shot_accuracy = totalSh ? Math.round(totalFr / totalSh * 1000) / 10 : 0;
   totals.dribble_success = totalDr ? Math.round(totalDw / totalDr * 1000) / 10 : 0;
 
+  const maxGoals = Math.max(0, ...players.map(p => p.Gl));
+
   return (
     <div className="page">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <h1 style={{ margin: 0 }}>Game Summary</h1>
         <Link to={`/games/${gameId}/tracker`} className="game-link">← Back to Tracker</Link>
       </div>
 
       {players.length === 0 ? (
-        <p className="text-muted">No stats recorded for this game yet.</p>
+        <div className="empty-state">
+          <span className="empty-state-icon">📊</span>
+          <div className="empty-state-title">No Stats Recorded</div>
+          <p>Head back to the tracker to log player actions.</p>
+        </div>
       ) : (
         <div className="surface" style={{ overflowX: 'auto', padding: 0 }}>
           <table className="stats-table">
@@ -139,27 +158,33 @@ export default function GameSummary() {
               {players.map((p) => {
                 const isExpanded = expanded.has(p.player_id);
                 const hasPositions = p.positions && p.positions.length > 0;
+                const isTopScorer = maxGoals > 0 && p.Gl === maxGoals;
                 return (
                   <>
                     <tr
                       key={p.player_id}
                       onClick={() => hasPositions && toggleExpand(p.player_id)}
-                      className={`${hasPositions ? 'expandable-row' : ''} ${isExpanded ? 'expanded' : ''}`}
+                      className={`${hasPositions ? 'expandable-row' : ''} ${isExpanded ? 'expanded' : ''} ${isTopScorer ? 'top-scorer' : ''}`}
                     >
                       {COLS.map((col) => {
                         const val = (p[col.key] as number) || 0;
                         const isGoal = col.key === 'Gl' && val > 0;
                         const isName = col.key === 'name';
-                        const display = col.isPct ? `${val}%` : isName ? p.name : val;
+
+                        if (col.isPct) {
+                          return <PctCell key={col.key} value={val} />;
+                        }
+
+                        const display = isName ? p.name : val;
                         return (
                           <td
                             key={col.key}
-                            className={`${isName ? 'left' : ''} ${isGoal ? 'goal-cell' : ''} ${col.isPct ? 'pct-cell' : ''}`}
+                            className={`${isName ? 'left' : ''} ${isGoal ? 'goal-cell' : ''}`}
                           >
                             {isName && hasPositions && (
                               <span className="expand-arrow">{isExpanded ? '▼' : '▶'}</span>
                             )}
-                            {display}
+                            {isGoal && val > 0 ? `⚽ ${val}` : display}
                           </td>
                         );
                       })}
@@ -173,11 +198,20 @@ export default function GameSummary() {
                           const val = key === 'minutes_played'
                             ? pos.minutes
                             : (pos as unknown as Record<string, number>)[key] ?? 0;
-                          const display = col.isPct ? `${val}%` : val;
+                          if (col.isPct) {
+                            return (
+                              <td key={col.key} className="pct-cell">
+                                <div className="pct-inner">
+                                  <span className="pct-val">{val}%</span>
+                                  <div className="pct-bar">
+                                    <div className="pct-bar-fill" style={{ width: `${Math.min(100, val as number)}%` }} />
+                                  </div>
+                                </div>
+                              </td>
+                            );
+                          }
                           return (
-                            <td key={col.key} className={col.isPct ? 'pct-cell' : ''}>
-                              {display}
-                            </td>
+                            <td key={col.key}>{val}</td>
                           );
                         })}
                       </tr>
@@ -190,8 +224,10 @@ export default function GameSummary() {
                 <td className="left">TOTAL</td>
                 {COLS.slice(2).map((col) => {
                   const val = totals[col.key] ?? 0;
-                  const display = col.isPct ? `${val}%` : val;
-                  return <td key={col.key}>{display}</td>;
+                  if (col.isPct) {
+                    return <PctCell key={col.key} value={val as number} />;
+                  }
+                  return <td key={col.key}>{val}</td>;
                 })}
               </tr>
             </tbody>

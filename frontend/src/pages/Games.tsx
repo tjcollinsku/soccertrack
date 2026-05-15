@@ -81,7 +81,7 @@ export default function Games() {
           <option value="home">Home</option>
           <option value="away">Away</option>
         </select>
-        <button type="submit" className="btn btn-primary">Add</button>
+        <button type="submit" className="btn btn-primary">Add Game</button>
       </form>
 
       <div className="surface">
@@ -89,21 +89,25 @@ export default function Games() {
           <div className="loading">Loading games…</div>
         ) : games.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">&#9917;</div>
-            No games yet. Add one above.
+            <span className="empty-state-icon">🏟️</span>
+            <div className="empty-state-title">No Games Yet</div>
+            <p>Schedule your first match above and start tracking.</p>
           </div>
         ) : (
           games.map((g) => (
-            <div key={g.id} className="game-row">
+            <div key={g.id} className={`game-row ${g.location}`}>
               <span className="game-date">{g.date}</span>
               <span className={`game-location ${g.location}`}>
                 {g.location === 'home' ? 'Home' : 'Away'}
               </span>
               <span className="game-opponent">
-                {g.location === 'home' ? 'vs' : '@'} {g.opponent}
+                <span className="game-vs">{g.location === 'home' ? 'vs' : '@'}</span>
+                {g.opponent}
               </span>
-              <Link to={`/games/${g.id}/setup`} className="game-link">Setup</Link>
-              <Link to={`/games/${g.id}/tracker`} className="game-link">Track</Link>
+              <div className="game-actions">
+                <Link to={`/games/${g.id}/setup`} className="game-link">Setup</Link>
+                <Link to={`/games/${g.id}/tracker`} className="game-link primary">Track</Link>
+              </div>
             </div>
           ))
         )}
